@@ -1,0 +1,12 @@
+# Application services and frontends. Each one is added here when its code and
+# multi-stage Dockerfile exist (see ADR-0005), for example:
+#
+#   identity:
+#     build: ./services/identity
+#     env_file: .env
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+name: identity-platform
+
+services: {}

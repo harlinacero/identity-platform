@@ -1,0 +1,6 @@
+# Files are mounted into Linux containers, where CRLF breaks shell scripts and LDIF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.jar binary
