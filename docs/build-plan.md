@@ -42,6 +42,7 @@ Estimates assume part-time work (about 15–20 hours per week).
 **Scope**
 - Identity with OpenIddict: Authorization Code + PKCE, client credentials, refresh token rotation with reuse detection, discovery and JWKS.
 - Local users hashed with Argon2id or PBKDF2 (temporarily in Identity; they move in phase 2).
+- Tenant model from the first migration (ADR-0006): `tenant_id` on clients, tokens and users, Row-Level Security, per-service database roles, and a mandatory `tenant_id` claim.
 - Gateway with YARP: routing, JWT validation against the JWKS, correlation id header.
 - Minimal React frontend: sign-in, callback, profile and sign-out with `oidc-client-ts`.
 - Unit tests (xUnit) and integration tests with Testcontainers (PostgreSQL).
@@ -49,6 +50,8 @@ Estimates assume part-time work (about 15–20 hours per week).
 **Definition of done**
 - A user signs in from React, the Gateway accepts their token and rejects a tampered or expired one.
 - Reusing an already-rotated refresh token revokes the whole token family (integration test).
+- With the same username in two tenants, signing in through tenant A's client never checks tenant B's credentials; a token without `tenant_id` gets 401 (integration tests).
+- A test confirms that the runtime database role is neither a superuser nor `BYPASSRLS`, and that Row-Level Security works with OpenIddict's stores.
 - Coverage ≥ 70% in Identity; ADR on OpenIddict vs. Duende or Keycloak.
 
 ---
@@ -57,15 +60,16 @@ Estimates assume part-time work (about 15–20 hours per week).
 
 **Scope**
 - Tenants & Users service: tenants, users, roles, permissions and assignments.
-- Isolation by `tenant_id` with EF Core global query filters and, optionally, PostgreSQL Row-Level Security.
+- Isolation by `tenant_id` with EF Core global query filters and PostgreSQL Row-Level Security (ADR-0006).
 - SCIM 2.0 endpoint (`/Users`, `/Groups`, basic filters, `PATCH`).
-- Idempotency: `Idempotency-Key` header with a stored-responses table, and uniqueness by `externalId`.
+- Idempotency: `Idempotency-Key` header with a stored-responses table, and uniqueness by `externalId`, both scoped by tenant.
 - Identity resolves credentials and roles through this service; roles travel as claims.
 
 **Definition of done**
 - A tenant A user cannot see tenant B data (dedicated integration tests).
 - Sending the same SCIM request 10 times leaves one user and returns the same response.
-- Postman collection or `.http` file with the full flow; ADR on the multi-tenancy strategy.
+- Two SCIM clients using the same `Idempotency-Key` and `externalId` get two separate users; adding a tenant B user to a tenant A role or group fails.
+- Postman collection or `.http` file with the full flow.
 
 ---
 
@@ -80,6 +84,7 @@ Estimates assume part-time work (about 15–20 hours per week).
 **Definition of done**
 - Stop Kafka, perform sign-ins and bring it back: no event is lost (automated test).
 - Delivering the same event twice produces a single document in OpenSearch.
+- A tenant A search never returns a tenant B event, and a malformed `tenantId` such as `*` is rejected.
 - Pact contract tests between producers and Audit; ADR on the outbox pattern.
 
 ---
@@ -97,7 +102,8 @@ Estimates assume part-time work (about 15–20 hours per week).
 **Definition of done**
 - Brute-force script: past the threshold, responses become 429 or account-locked, and the events show up in Audit.
 - With Risk down, sign-in still works and requires MFA.
-- A poison message ends up in the DLQ after N retries without blocking the queue.
+- A poison message ends up in the DLQ after N retries without blocking the queue; so does a command without a `tenantId`.
+- The same user id in two tenants has independent lockout, cache and risk state.
 - ADR on the lockout and risk policy.
 
 ---
@@ -112,6 +118,7 @@ Estimates assume part-time work (about 15–20 hours per week).
 
 **Definition of done**
 - An LDAP user signs in through the same OIDC flow.
+- With two directories configured, a tenant A sign-in or DN lookup never reaches tenant B's directory.
 - When OpenLDAP is stopped, the circuit opens within seconds and, if the tenant allows it, local credentials are used; the transition is visible in metrics and in Audit.
 - JUnit integration tests with Testcontainers (OpenLDAP); ADR on local-credential fallback and its risks.
 
@@ -126,7 +133,7 @@ Estimates assume part-time work (about 15–20 hours per week).
 - React self-service: password change, MFA and active sessions with revocation.
 
 **Definition of done**
-- A tenant administrator manages their tenant without seeing others; a super-administrator sees all of them.
+- A tenant administrator manages their tenant without seeing others, including in the live audit stream; a super-administrator sees all of them through the server-side policy in ADR-0006.
 - A brute-force lockout appears in the console in under 5 seconds.
 - Unit tests (Jasmine or Vitest) and Playwright E2E tests for the main flow.
 

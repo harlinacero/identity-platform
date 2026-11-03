@@ -116,8 +116,9 @@ The project is built with Claude Code running locally: shared project context in
 - [ADR-0003 · Kafka for events, RabbitMQ for commands](docs/adr/0003-kafka-events-rabbitmq-commands.md)
 - [ADR-0004 · Local AI-assisted development with Claude Code](docs/adr/0004-local-ai-assisted-development.md)
 - [ADR-0005 · Docker as the only host requirement](docs/adr/0005-docker-only-development.md)
+- [ADR-0006 · Multi-tenancy strategy](docs/adr/0006-multi-tenancy-strategy.md)
 
-Upcoming: OpenIddict vs. Keycloak or Duende, multi-tenancy strategy, outbox, lockout and risk policy, local-credential fallback, HPA vs. KEDA, and multi-cloud strategy.
+Upcoming: OpenIddict vs. Keycloak or Duende, outbox, lockout and risk policy, local-credential fallback, HPA vs. KEDA, and multi-cloud strategy.
 
 ## Demo
 A k6 sign-in load test scales Identity on Kubernetes, and a brute-force attempt is blocked live in the audit console. *(Video and screenshots in phase 10.)*
