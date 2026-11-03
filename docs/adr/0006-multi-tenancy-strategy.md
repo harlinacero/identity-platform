@@ -1,6 +1,6 @@
 # ADR-0006 · Multi-tenancy strategy
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-11-03
 
 ## Context
