@@ -99,6 +99,7 @@ flowchart TB
 
 ## Decisions reflected
 - Database per service; no service reads another service's database.
+- Shared databases with `tenant_id` and Row-Level Security; every service validates the JWT itself, and internal calls use a service identity (ADR-0006).
 - Kafka for facts (immutable, replayable events); RabbitMQ for commands (single effective delivery, DLQ).
 - Every internal synchronous call has a timeout, retries with backoff and jitter, and a circuit breaker where the dependency is external.
 - W3C trace context (`traceparent`) is propagated over HTTP and through message headers on both brokers.

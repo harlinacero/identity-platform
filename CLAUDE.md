@@ -47,7 +47,7 @@ Per service, in toolchain containers (`./dev.ps1 run <tool> <dir> <command...>`)
 ```
 
 ## Non-negotiable rules
-1. **Tenant isolation.** Every query on tenant-owned data filters by `tenant_id`. The tenant comes from the validated token or SCIM credentials, never from a request body or query string.
+1. **Tenant isolation.** Every query on tenant-owned data filters by `tenant_id`. The tenant comes from the validated token, the SCIM credentials or, during sign-in, the OIDC client; never from a request body, query string, route value or header. The exceptions are the super-administrator policy and allow-listed internal service calls (ADR-0006).
 2. **Database per service.** A service never reads or writes another service's database.
 3. **Outbox for events.** State changes and their events are saved in the same transaction; a relay publishes to Kafka. Never publish directly from a request handler.
 4. **Idempotent consumers.** Every consumer deduplicates by `eventId` or message id. SCIM writes honour `Idempotency-Key` and `externalId`.

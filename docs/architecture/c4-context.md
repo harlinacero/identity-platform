@@ -30,6 +30,7 @@ flowchart TB
 ```
 
 ## Notes
-- **Multi-tenant:** each tenant has its own users, roles, OIDC clients and, optionally, its own LDAP directory.
+- **Multi-tenant:** each tenant has its own users, roles, OIDC clients and, optionally, its own LDAP directory (ADR-0006).
+- **Super-administrators:** they are not shown as a separate actor. They belong to a reserved platform tenant and are the only users who can act across tenants; tenant administrators manage their own tenant only.
 - **Trust boundary:** all external traffic enters through a single entry point (the Gateway, see level 2).
 - **Cloud equivalents:** see the table in the README; the diagram is the same for local, Azure and AWS.
