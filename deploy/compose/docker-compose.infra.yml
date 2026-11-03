@@ -140,3 +140,5 @@ volumes:
   opensearch_data:
   openldap_data:
   openldap_config:
+
+invalid_top_level_key: true
