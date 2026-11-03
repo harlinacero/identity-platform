@@ -1,0 +1,135 @@
+# Runs only what changed. Require the `ci-success` job in branch protection: it stays
+# reliable when jobs are skipped by the path filters. Split into per-stack workflows
+# once services have real code (see docs/repository-structure.md).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      dotnet: ${{ steps.filter.outputs.dotnet }}
+      java: ${{ steps.filter.outputs.java }}
+      go: ${{ steps.filter.outputs.go }}
+      python: ${{ steps.filter.outputs.python }}
+      node: ${{ steps.filter.outputs.node }}
+      frontends: ${{ steps.filter.outputs.frontends }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            shared: &shared
+              - '.github/workflows/ci.yml'
+              - 'Makefile'
+              - 'deploy/compose/docker-compose.tools.yml'
+            dotnet:
+              - *shared
+              - 'services/gateway/**'
+              - 'services/identity/**'
+              - 'services/tenants-users/**'
+              - 'building-blocks/dotnet/**'
+            java:
+              - *shared
+              - 'services/ldap-connector/**'
+            go:
+              - *shared
+              - 'services/audit/**'
+            python:
+              - *shared
+              - 'services/risk/**'
+            node:
+              - *shared
+              - 'services/notifications/**'
+            frontends:
+              - *shared
+              - 'frontends/**'
+            infra:
+              - *shared
+              - 'deploy/compose/**'
+              - '.env.example'
+
+  dotnet:
+    needs: changes
+    if: needs.changes.outputs.dotnet == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-dotnet build-dotnet test-dotnet
+
+  java:
+    needs: changes
+    if: needs.changes.outputs.java == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-java build-java test-java
+
+  go:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-go build-go test-go
+
+  python:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-python build-python test-python
+
+  node:
+    needs: changes
+    if: needs.changes.outputs.node == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-node build-node test-node
+
+  frontends:
+    needs: changes
+    if: needs.changes.outputs.frontends == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-frontends build-frontends test-frontends
+
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint-compose
+      # Phase 0 definition of done: all healthchecks green in under 3 minutes.
+      - run: make infra
+        timeout-minutes: 3
+      - if: failure()
+        run: |
+          make ps
+          make logs FOLLOW=
+
+  ci-success:
+    needs: [changes, dotnet, java, go, python, node, frontends, infra]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1

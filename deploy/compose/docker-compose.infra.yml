@@ -9,14 +9,14 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?run from the repository root with a .env file}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-      POSTGRES_DB: identity
+      POSTGRES_DB: ${POSTGRES_DB:-identity}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./deploy/compose/seed/postgres:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d identity && psql -U \"$$POSTGRES_USER\" -d tenants_users -c 'select 1' >/dev/null"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\" && psql -U \"$$POSTGRES_USER\" -d tenants_users -c 'select 1' >/dev/null"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -27,7 +27,7 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?}
     command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -43,7 +43,7 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,HOST://:29092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,HOST://localhost:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,HOST://localhost:${KAFKA_PORT:-29092}
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -53,7 +53,7 @@ services:
       KAFKA_LOG_DIRS: /var/lib/kafka/data
       KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
     ports:
-      - "127.0.0.1:29092:29092"
+      - "127.0.0.1:${KAFKA_PORT:-29092}:29092"
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
@@ -69,8 +69,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:?}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?}
     ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -87,7 +87,7 @@ services:
       OPENSEARCH_JAVA_OPTS: -Xms512m -Xmx512m
       OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD:?}
     ports:
-      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:${OPENSEARCH_PORT:-9200}:9200"
     volumes:
       - opensearch_data:/usr/share/opensearch/data
     healthcheck:
@@ -100,8 +100,8 @@ services:
   openldap:
     image: osixia/openldap:1.5.0
     environment:
-      LDAP_ORGANISATION: Identity Platform
-      LDAP_DOMAIN: identity-platform.local
+      LDAP_ORGANISATION: ${LDAP_ORGANISATION:-Identity Platform}
+      LDAP_DOMAIN: ${LDAP_DOMAIN:-identity-platform.local}
       LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:?}
       LDAP_TLS: "false"
     # slapd allocates memory per file descriptor and exhausts it under Docker's default limit.
@@ -110,7 +110,7 @@ services:
         soft: 1024
         hard: 1024
     ports:
-      - "127.0.0.1:389:389"
+      - "127.0.0.1:${LDAP_PORT:-389}:389"
     volumes:
       - openldap_data:/var/lib/ldap
       - openldap_config:/etc/ldap/slapd.d
@@ -124,8 +124,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.27
     ports:
-      - "127.0.0.1:1025:1025"
-      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
     healthcheck:
       test: ["CMD", "/mailpit", "readyz"]
       interval: 5s
