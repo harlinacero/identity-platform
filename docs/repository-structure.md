@@ -146,6 +146,8 @@ identity-platform/
     └── repository-structure.md
 ```
 
+The per-stack workflows above are the target layout. Until services have real code, `ci.yml` holds all the jobs.
+
 ## Conventions
 - **English only:** code, comments, commits, docs, ADRs and agent files are written in English.
 - **One self-contained folder per service:** its own `Dockerfile`, tests and Helm chart. No service imports code from another; shared code lives in `building-blocks` or `contracts`.
