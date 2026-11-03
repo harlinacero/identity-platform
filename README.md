@@ -2,7 +2,7 @@
 
 A multi-tenant OAuth2/OIDC identity platform built with polyglot microservices (.NET, Java, Go, Python and Node.js) and React and Angular frontends. It demonstrates asynchronous communication, resilience, idempotency, observability and autoscaling, runs entirely on a local machine, and has a deployment path to Azure and AWS through Terraform.
 
-> Status: **Phase 0 · Foundations.** See the [build plan](docs/build-plan.md).
+> Status: **Phase 1 · Minimal identity.** Phase 0 is complete. See the [build plan](docs/build-plan.md).
 
 ## What it solves
 - Centralized sign-in (OIDC with Authorization Code + PKCE) for applications across many tenants.
