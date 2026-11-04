@@ -54,7 +54,7 @@ Shared databases with a `tenant_id` column, enforced in two layers, with the ten
 - A bug in application code no longer reaches other tenants' rows on its own, because the database also enforces the boundary.
 - Each service does more work: tenant context on every transaction, JWT validation and more roles to manage. Local Compose and Kubernetes need per-service database roles from Phase 1.
 - The same user can exist in two tenants as two separate accounts; there is no cross-tenant single account.
-- **To watch:** OpenIddict's EF Core stores are not tenant-aware, and they look up tokens and authorization codes before a user is known. Phase 1 must prove that RLS works with them, taking the tenant from `client_id`. If it doesn't, those tables need a documented exception or custom stores, and this ADR must be updated.
+- **Resolved on 2026-11-04:** OpenIddict's EF Core stores are not tenant-aware, and they look up tokens and authorization codes before a user is known. Identity feature 001 proved that RLS works with them, taking the tenant from `client_id` or from the validated token, with a test that fails when RLS is removed.
 - **To watch:** failed logins for an unknown client have no tenant. Audit needs a defined destination for these events, decided in Phase 3.
 - Not covered here: per-service OpenSearch roles and Redis ACLs, which remain a later hardening step.
 

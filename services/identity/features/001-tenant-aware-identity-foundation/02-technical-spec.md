@@ -23,8 +23,8 @@ All paths are under `services/identity/`.
 - (+) `Endpoints/UserInfoEndpoints.cs` — `/connect/userinfo` passthrough.
 - (+) `Endpoints/LoginEndpoints.cs` — `GET` and `POST /account/login`: the minimal HTML form, with antiforgery.
 - (+) `Middleware/TenantResolutionMiddleware.cs` — takes `client_id` from the OIDC request, or from the local `returnUrl` on `/account/login`, and sets the tenant context. It reads no other tenant input.
-- (+) `OpenIddict/TenantTokenValidationHandler.cs` — OpenIddict handler ordered just before `ValidateTokenEntry`. It reads `tenant_id` from the validated token, rejects tokens without it, rejects a mismatch with the tenant already resolved, and sets the context when none is set (`/connect/userinfo`).
-- (+) `Options/SessionOptions.cs` — `Identity:Session:Duration`.
+- (+) `OpenIddict/TenantTokenValidationHandler.cs` — OpenIddict handler ordered just before `RestoreTokenEntryProperties`, the first read of a token entry. It reads `tenant_id` from the validated token, rejects tokens without it, rejects a mismatch with the tenant already resolved, and sets the context when none is set (`/connect/userinfo`).
+- (+) `Options/IdentitySessionOptions.cs` — `Identity:Session:Duration`.
 - (+) `Errors/DataStoreExceptionHandler.cs` — maps data store failures to 503.
 - (+) `Dockerfile` at the service root — multi-stage; includes a migrations bundle target.
 
@@ -47,7 +47,7 @@ All paths are under `services/identity/`.
 - (+) `Persistence/Interceptors/TenantConnectionInterceptor.cs` — applies `set_config('app.tenant_id', <tenant or ''>, false)` whenever a connection opens.
 - (+) `Persistence/Interceptors/TenantWriteInterceptor.cs` — stamps `TenantId` on added entities and throws on a mismatch or when no tenant is set.
 - (+) `Persistence/Migrations/` — schema, RLS policies and composite foreign keys.
-- (+) `Security/Pbkdf2PasswordVerifier.cs` — wraps `PasswordHasher<T>` with 210,000 iterations.
+- (+) `Security/Pbkdf2PasswordVerifier.cs` — wraps `PasswordHasher<T>` from the ASP.NET Core shared framework, with 210,000 iterations.
 - (+) `Seeding/DevelopmentSeeder.cs`, `Seeding/SeedOptions.cs` — idempotent; one scope per tenant.
 
 ### Tests
@@ -131,7 +131,6 @@ Compose adds `identity-migrations` (one-shot bundle) and `identity`, which depen
 | `OpenIddict.AspNetCore`, `OpenIddict.EntityFrameworkCore` | 7.8.0 | OIDC server and stores |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.3 | PostgreSQL provider |
 | `Microsoft.EntityFrameworkCore.Design` | 10.x | Migrations |
-| `Microsoft.Extensions.Identity.Core` | 10.x | `PasswordHasher<T>`, with no separate cryptography library |
 | `xunit.v3` | 4.0.2 | Tests |
 | `Testcontainers.PostgreSql` | 4.16.0 | Real database in tests |
 | `Microsoft.AspNetCore.Mvc.Testing` | 10.x | In-process API tests |
@@ -170,7 +169,7 @@ All tests are integration tests against real PostgreSQL unless stated otherwise.
 | AC-03 | `SeedOptions` validation | Integration (startup) |
 | AC-04 | `DevelopmentSeeder` | Integration (Production environment) |
 | AC-05 | Authorization, login and token endpoints | Integration, full flow |
-| AC-06, AC-07, AC-32 | Session cookie, `AuthorizationEndpoints`, `SessionOptions` | Integration, with `FakeTimeProvider` for AC-32 |
+| AC-06, AC-07, AC-32 | Session cookie, `AuthorizationEndpoints`, `IdentitySessionOptions` | Integration, with `FakeTimeProvider` for AC-32 |
 | AC-08 | `TenantResolutionMiddleware` | Integration |
 | AC-09, AC-13, AC-14 | `LoginEndpoints`, `ValidateCredentialsHandler` | Integration; unit for the dummy hash |
 | AC-10, AC-11, AC-12 | OpenIddict server configuration | Integration |
@@ -186,9 +185,9 @@ All tests are integration tests against real PostgreSQL unless stated otherwise.
 ## 10. Risks, trade-offs & decisions
 - **D-01 — The tenant setting is applied per connection, not with `SET LOCAL`. Approved on 2026-11-04, with the risk accepted subject to the tests; recorded as an amendment to ADR-0006.** OpenIddict's stores read outside transactions, so `SET LOCAL` would have no effect on them. The alternative, one transaction per request, would hold a connection during password hashing. EF Core opens connections per operation, the interceptor always overwrites the value when one opens, and Npgsql resets connections when they return to the pool. The goal of the ADR is kept, and AC-28 tests it. **Limit:** this is incompatible with PgBouncer in transaction mode, which matters for the cloud phase.
 - **D-02 — `client_directory` is a table without RLS.** The tenant must be known before tenant-protected data can be read, so client lookup can't sit behind RLS. Alternatives rejected: a `SECURITY DEFINER` function, which needs an owner that bypasses `FORCE`; and an exception on the applications table, which would expose its other columns. The table holds only public values, and the runtime role cannot change existing rows.
-- **D-03 — Userinfo sets the tenant inside OpenIddict's pipeline.** OpenIddict looks up the token entry before any endpoint code runs (`ValidateTokenEntry`), so the context comes from the signature-validated token in a handler ordered just before it.
+- **D-03 — Userinfo sets the tenant inside OpenIddict's pipeline.** OpenIddict looks up the token entry before any endpoint code runs (first in `RestoreTokenEntryProperties`), so the context comes from the signature-validated token in a handler ordered just before it.
 - **D-04 — No token pruning in this feature.** OpenIddict's pruning runs across tenants and would need tenant context per unit of work. Expired rows accumulate until a later feature adds it.
-- **R-01 — RLS with OpenIddict is unproven.** Reading OpenIddict's source supports this design but doesn't prove it. AC-29 and AC-31 do, and failure stops the work (BR-13).
+- **R-01 — RLS with OpenIddict: closed on 2026-11-04.** Complete sign-ins pass with RLS enforced and through the runtime role, also with every EF Core filter removed. Removing RLS from a table makes the proof fail. See the T-28 notes in `03-tasks.md`.
 - **R-02 — The retrying strategy and OpenIddict's own explicit transactions may conflict.** EF Core rejects user transactions under a retrying strategy unless they run inside it. AC-17 and AC-19 exercise this path. If they conflict, retries get limited or removed, and this spec gets updated.
 - **R-03 — `docker compose up --wait` with a one-shot service may report failure** when `identity-migrations` exits, which would break `./dev.ps1 up`. This needs checking during implementation; the alternative is a `depends_on` condition without the service in the wait set.
 - **R-04 — Sessions and antiforgery tokens don't survive a restart** until data protection keys are persisted. This is acceptable with 15-minute sessions and a temporary form.

@@ -8,42 +8,42 @@ Legend: `[TEST]` write a failing test (red) · `[IMPL]` make it pass (green) · 
 Paths are relative to `services/identity/`, unless they start at the repository root. `IT` means `tests/Identity.IntegrationTests` and `UT` means `tests/Identity.UnitTests`. All commands run in containers (`./dev.ps1 run dotnet services/identity dotnet test`).
 
 ## Group 1 — Scaffolding
-- [ ] **T-01** `[SETUP]` `Identity.slnx`, `Directory.Build.props` (nullable, warnings as errors), `Directory.Packages.props` with the approved packages, the four `src/` projects and the two test projects.
-- [ ] **T-02** `[SETUP]` Repository root `deploy/compose/seed/postgres/02-identity-roles.sh` — creates `identity_migrator` and `identity_app` from environment variables.
-- [ ] **T-03** `[SETUP]` `IT/Infrastructure/PostgresFixture.cs` — starts PostgreSQL with the roles script, migrates as `identity_migrator`, and exposes an `identity_app` connection string.
-- [ ] **T-04** `[SETUP]` `IT/Infrastructure/IdentityApiFactory.cs` and `IT/Infrastructure/OidcTestClient.cs` — in-process API in the Testing environment; helper that runs the code flow with a generated verifier and challenge.
+- [x] **T-01** `[SETUP]` `Identity.slnx`, `Directory.Build.props` (nullable, warnings as errors), `Directory.Packages.props` with the approved packages, the four `src/` projects and the two test projects.
+- [x] **T-02** `[SETUP]` Repository root `deploy/compose/seed/postgres/02-identity-roles.sh` — creates `identity_migrator` and `identity_app` from environment variables.
+- [x] **T-03** `[SETUP]` `IT/Infrastructure/PostgresFixture.cs` — starts PostgreSQL with the roles script, migrates as `identity_migrator`, and exposes an `identity_app` connection string.
+- [x] **T-04** `[SETUP]` `IT/Infrastructure/IdentityApiFactory.cs` and `IT/Infrastructure/OidcTestClient.cs` — in-process API in the Testing environment; helper that runs the code flow with a generated verifier and challenge.
 
 ## Group 2 — Data store isolation (AC-25, AC-26, AC-27, AC-28, AC-30)
-- [ ] **T-05** `[TEST]` `IT/Isolation/RuntimeRoleTests.cs` → `RuntimeRole_WhenInspected_ShouldNotBypassRlsOrOwnTables` — `identity_app` has `rolsuper` and `rolbypassrls` false, owns no table and cannot run DDL. (AC-30)
-- [ ] **T-06** `[IMPL]` Finish `02-identity-roles.sh` and the grants in the initial migration. (T-05)
-- [ ] **T-07** `[TEST]` `IT/Isolation/RowLevelSecurityTests.cs` → `Query_WhenFilterIgnored_ShouldReturnOnlyCurrentTenantRows` — with `IgnoreQueryFilters()`, a read and an update for tenant A reach only tenant A's `local_users`. (AC-25)
-- [ ] **T-08** `[TEST]` Same file → `Query_WhenNoTenantEstablished_ShouldReturnNothing` and `Insert_WhenNoTenantEstablished_ShouldBeRejected` — using raw SQL, so that only the data store is under test. (AC-26)
-- [ ] **T-09** `[TEST]` Same file → `Insert_WhenRowBelongsToAnotherTenant_ShouldBeRejected` — raw SQL as tenant A, with tenant B's id, fails the policy. (AC-27)
-- [ ] **T-10** `[TEST]` Same file → `NextOperation_WhenConnectionIsReused_ShouldNotSeePreviousTenant` — on a pool of size 1, an operation for tenant A followed by one with no tenant returns no rows. (AC-28)
-- [ ] **T-11** `[IMPL]` `LocalUser`, `ITenantOwned`, `ITenantContext`, `ITenantContextSetter`, `IdentityDbContext` with its global filter, `TenantConnectionInterceptor`, and the initial migration with `local_users`, the policy and `FORCE`. (T-07 to T-10)
-- [ ] **T-12** `[TEST]` `UT/Tenancy/TenantWriteInterceptorTests.cs` → `SaveChanges_WhenTenantMissing_ShouldThrow`, `SaveChanges_WhenTenantDiffers_ShouldThrow`, `SaveChanges_WhenEntityAdded_ShouldStampCurrentTenant`. (AC-26, AC-27)
-- [ ] **T-13** `[IMPL]` `TenantWriteInterceptor`. (T-12)
-- [ ] **T-14** `[TEST]` `UT/Tenancy/TenantContextTests.cs` → `Set_WhenChangedWithinScope_ShouldThrow`. (AC-28)
-- [ ] **T-15** `[IMPL]` Set-once behaviour in the tenant context. (T-14)
+- [x] **T-05** `[TEST]` `IT/Isolation/RuntimeRoleTests.cs` → `RuntimeRole_WhenInspected_ShouldNotBypassRlsOrOwnTables` — `identity_app` has `rolsuper` and `rolbypassrls` false, owns no table and cannot run DDL. (AC-30)
+- [x] **T-06** `[IMPL]` Finish `02-identity-roles.sh` and the grants in the initial migration. (T-05)
+- [x] **T-07** `[TEST]` `IT/Isolation/RowLevelSecurityTests.cs` → `Query_WhenFilterIgnored_ShouldReturnOnlyCurrentTenantRows` — with `IgnoreQueryFilters()`, a read and an update for tenant A reach only tenant A's `local_users`. (AC-25)
+- [x] **T-08** `[TEST]` Same file → `Query_WhenNoTenantEstablished_ShouldReturnNothing` and `Insert_WhenNoTenantEstablished_ShouldBeRejected` — using raw SQL, so that only the data store is under test. (AC-26)
+- [x] **T-09** `[TEST]` Same file → `Insert_WhenRowBelongsToAnotherTenant_ShouldBeRejected` — raw SQL as tenant A, with tenant B's id, fails the policy. (AC-27)
+- [x] **T-10** `[TEST]` Same file → `NextOperation_WhenConnectionIsReused_ShouldNotSeePreviousTenant` — on a pool of size 1, an operation for tenant A followed by one with no tenant returns no rows. (AC-28)
+- [x] **T-11** `[IMPL]` `LocalUser`, `ITenantOwned`, `ITenantContext`, `ITenantContextSetter`, `IdentityDbContext` with its global filter, `TenantConnectionInterceptor`, and the initial migration with `local_users`, the policy and `FORCE`. (T-07 to T-10)
+- [x] **T-12** `[TEST]` `UT/Tenancy/TenantWriteGuardTests.cs` → `Apply_WhenTenantMissing_ShouldThrow`, `Apply_WhenTenantDiffers_ShouldThrow`, `Apply_WhenEntityHasNoTenant_ShouldStampCurrentTenant`. (AC-26, AC-27)
+- [x] **T-13** `[IMPL]` `TenantWriteGuard`, used by `TenantWriteInterceptor`. (T-12)
+- [x] **T-14** `[TEST]` `UT/Tenancy/TenantContextTests.cs` → `Set_WhenChangedWithinScope_ShouldThrow`. (AC-28)
+- [x] **T-15** `[IMPL]` Set-once behaviour in the tenant context. (T-14)
 
 ## Group 3 — Test data (AC-01, AC-02, AC-03, AC-04, AC-20)
-- [ ] **T-16** `[TEST]` `IT/Seeding/DevelopmentSeederTests.cs` → `Seed_WhenEmpty_ShouldCreateTwoTenantsWithClientsAndUsers` — two directory entries, one application per tenant, the same username in both, and password hashes that differ. (AC-01)
-- [ ] **T-17** `[TEST]` Same file → `Seed_WhenRunTwice_ShouldNotDuplicateOrChangeData` — counts and hashes unchanged. (AC-02)
-- [ ] **T-18** `[TEST]` Same file → `Startup_WhenSeedSecretMissing_ShouldFailAndNameSettingOnly` — the startup error contains the key and no configured secret value. (AC-03)
-- [ ] **T-19** `[TEST]` Same file → `Startup_WhenProduction_ShouldNotSeed` — with seed secrets present, no rows are created. (AC-04)
-- [ ] **T-20** `[TEST]` `UT/Security/Pbkdf2PasswordVerifierTests.cs` → `Hash_WhenCreated_ShouldNotContainPasswordAndUseConfiguredIterations`, `Verify_WhenPasswordWrong_ShouldFail`. (AC-20)
-- [ ] **T-21** `[IMPL]` `Pbkdf2PasswordVerifier`, `ClientDirectoryEntry`, `ClientDirectory`, the `client_directory` migration, `SeedOptions` with startup validation, and `DevelopmentSeeder` with one scope per tenant. (T-16 to T-20)
+- [x] **T-16** `[TEST]` `IT/Seeding/DevelopmentSeederTests.cs` → `Seed_WhenEmpty_ShouldCreateTwoTenantsWithClientsAndUsers` — two directory entries, one application per tenant, the same username in both, and password hashes that differ. (AC-01)
+- [x] **T-17** `[TEST]` Same file → `Seed_WhenRunTwice_ShouldNotDuplicateOrChangeData` — counts and hashes unchanged. (AC-02)
+- [x] **T-18** `[TEST]` Same file → `Startup_WhenSeedSecretMissing_ShouldFailAndNameSettingOnly` — the startup error contains the key and no configured secret value. (AC-03)
+- [x] **T-19** `[TEST]` Same file → `Startup_WhenProduction_ShouldNotSeed` — with seed secrets present, no rows are created. (AC-04)
+- [x] **T-20** `[TEST]` `UT/Security/Pbkdf2PasswordVerifierTests.cs` → `Hash_WhenCreated_ShouldNotContainPasswordAndUseConfiguredIterations`, `Verify_WhenPasswordWrong_ShouldFail`. (AC-20)
+- [x] **T-21** `[IMPL]` `Pbkdf2PasswordVerifier`, `ClientDirectoryEntry`, `ClientDirectory`, the `client_directory` migration, `SeedOptions` with startup validation, and `DevelopmentSeeder` with one scope per tenant. (T-16 to T-20)
 
 ## Group 4 — Complete sign-in (AC-05, AC-21)
-- [ ] **T-22** `[TEST]` `IT/SignIn/AuthorizationCodeFlowTests.cs` → `CodeFlow_WhenCredentialsValid_ShouldIssueTokenWithUserAndTenant` — `sub` and `tenant_id` are tenant A's, and `expires_in` is 900 seconds. (AC-05)
-- [ ] **T-23** `[TEST]` `IT/SignIn/UserInfoTests.cs` → `UserInfo_WhenTokenValid_ShouldReturnUserAndTenant`. (AC-21)
-- [ ] **T-24** `[IMPL]` OpenIddict entities and migration with `tenant_id`, RLS and composite foreign keys; server configuration with PKCE `S256`, lifetimes and `DisableEntityCaching()`; `TenantResolutionMiddleware`; `TenantTokenValidationHandler`; `ValidateCredentialsHandler`; authorization, token, userinfo and login endpoints. (T-22, T-23)
+- [x] **T-22** `[TEST]` `IT/SignIn/AuthorizationCodeFlowTests.cs` → `CodeFlow_WhenCredentialsValid_ShouldIssueTokenWithUserAndTenant` — `sub` and `tenant_id` are tenant A's, and `expires_in` is 900 seconds. (AC-05)
+- [x] **T-23** `[TEST]` `IT/SignIn/UserInfoTests.cs` → `UserInfo_WhenTokenValid_ShouldReturnUserAndTenant`. (AC-21)
+- [x] **T-24** `[IMPL]` OpenIddict entities and migration with `tenant_id`, RLS and composite foreign keys; server configuration with PKCE `S256`, lifetimes and `DisableEntityCaching()`; `TenantResolutionMiddleware`; `TenantTokenValidationHandler`; `ValidateCredentialsHandler`; authorization, token, userinfo and login endpoints. (T-22, T-23)
 
 ## Group 5 — RLS proof: stop gate (AC-29, AC-31)
-- [ ] **T-25** `[TEST]` `IT/Isolation/SignInRecordIsolationTests.cs` → `SignIn_WhenRlsEnforced_ShouldSucceedForBothTenantsAndHideEachOthersRecords` — complete sign-ins for both tenants; with filters ignored, tenant A's context sees no tenant B applications, authorizations or tokens, and vice versa. (AC-29)
-- [ ] **T-26** `[TEST]` `IT/Isolation/RlsCatalogTests.cs` → `Catalog_WhenInspected_ShouldHaveRlsAndForceOnEveryTenantOwnedTable` — queries the catalog for every table with `tenant_id`, and on failure names the unprotected tables. (AC-31)
-- [ ] **T-27** `[IMPL]` Only the corrections that stay within the approved design. (T-25, T-26)
-- [ ] **T-28** **STOP GATE (BR-13).** If T-25 or T-26 can't pass within the approved design, stop all further tasks, record the evidence below in Implementation notes, and bring it to the owner. If they pass, record the results and close R-01 in the technical spec and ADR-0006. (AC-31)
+- [x] **T-25** `[TEST]` `IT/Isolation/SignInRecordIsolationTests.cs` → `SignIn_WhenRlsEnforced_ShouldSucceedForBothTenantsAndHideEachOthersRecords` — complete sign-ins for both tenants; with filters ignored, tenant A's context sees no tenant B applications, authorizations or tokens, and vice versa. (AC-29)
+- [x] **T-26** `[TEST]` `IT/Isolation/RlsCatalogTests.cs` → `Catalog_WhenInspected_ShouldHaveRlsAndForceOnEveryTenantOwnedTable` — queries the catalog for every table with `tenant_id`, and on failure names the unprotected tables. (AC-31)
+- [x] **T-27** `[IMPL]` Only the corrections that stay within the approved design. (T-25, T-26)
+- [x] **T-28** **STOP GATE (BR-13).** If T-25 or T-26 can't pass within the approved design, stop all further tasks, record the evidence below in Implementation notes, and bring it to the owner. If they pass, record the results and close R-01 in the technical spec and ADR-0006. (AC-31)
 
 ## Group 6 — Tenant boundaries at sign-in (AC-06, AC-07, AC-08, AC-09, AC-13, AC-14, AC-32)
 - [ ] **T-29** `[TEST]` `IT/SignIn/SessionTests.cs` → `Authorize_WhenSessionInSameTenant_ShouldNotAskForCredentials` — redirects to the client with a code. (AC-06)
@@ -129,4 +129,19 @@ Paths are relative to `services/identity/`, unless they start at the repository 
 | AC-32 | T-31 |
 
 ## Implementation notes
-(Deviations from the plan discovered while implementing.)
+### T-28 stop gate: passed (2026-11-04)
+RLS works with OpenIddict's stores within the approved design. All 26 tests pass (`./dev.ps1 run dotnet services/identity dotnet test`), with the service connecting as `identity_app`. Two temporary negative controls confirmed the proof can fail and does not depend on the EF Core filters:
+
+| Control | Expected | Result |
+|---------|----------|--------|
+| A: remove RLS from `openiddict_tokens` | The proof fails | 3 failed, 23 passed: the two catalog tests for that table and `SignIn_WhenRlsEnforced_...` |
+| B: remove every EF Core query filter | Sign-in works on RLS alone | 26 passed |
+
+### Deviations
+- **T-21 and T-24:** OpenIddict's entities and migration moved from T-24 to T-21, because the seeder creates applications. The migrations are `InitialLocalUsers` and `OpenIddictAndClientDirectory`.
+- **T-12 and T-13:** the rule lives in `TenantWriteGuard` and is unit tested there, because testing the interceptor directly would have needed a database or an in-memory provider. The interceptor only calls it, and the integration tests cover the path.
+- **T-27 (D-03):** the first run failed at `/connect/userinfo` with 401. OpenIddict's `RestoreTokenEntryProperties` reads the token entry before `ValidateTokenEntry`, so RLS hid the row. `TenantTokenValidationHandler` now runs just before `RestoreTokenEntryProperties`.
+- **Packages:** `Microsoft.Extensions.Identity.Core` was removed, because the ASP.NET Core shared framework already provides it. `Microsoft.NET.Test.Sdk` and `xunit.runner.visualstudio` aren't used either: xUnit v3 runs on Microsoft.Testing.Platform, selected in `global.json`.
+- **Naming:** `SessionOptions` became `IdentitySessionOptions`, because the original name clashes with an ASP.NET Core type.
+- **Additions:** `Verify_WhenPasswordRight_ShouldSucceed` and `Set_WhenSameTenantSetAgain_ShouldKeepIt`; and the migrations revoke `identity_app`'s access to `__EFMigrationsHistory`, for AC-30.
+- **`ValidateCredentialsHandler`:** written with its dummy hash in T-24, so T-37 must be checked by disabling the dummy hash.
