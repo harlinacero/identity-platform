@@ -88,9 +88,31 @@ Paths are relative to `services/identity/`, unless they start at the repository 
 - [x] **T-58** `[SETUP]` `services/identity/README.md` — endpoints, configuration, roles, how to run it and how to try a sign-in. Update the repository root `README.md` where it describes Quick start or configuration, and add the `features/` folder to `docs/repository-structure.md`.
 - [x] **T-59** `[SETUP]` Update `02-technical-spec.md` and ADR-0006 with anything that changed during implementation, including R-01 and R-02.
 
+## Group 12 — Review findings (T-61, approved 2026-11-11)
+Fixes for the findings of `security-reviewer`, `tenant-isolation-auditor` and `resilience-reviewer` that the owner chose to close in this feature. The deferred findings are listed in the checklist.
+
+- [x] **T-62** `[TEST]` `UT/Persistence/DataStoreFailuresTests.cs` → `IsTransient_WhenPermanentDatabaseError_ShouldBeFalse` (theory: unique violation, insufficient privilege, undefined table; direct and wrapped in `DbUpdateException`) and `IsTransient_WhenOutageOrTimeout_ShouldBeTrue` (theory: `RetryLimitExceededException`, `TimeoutException`, transient `NpgsqlException`). (Resilience H1)
+- [x] **T-63** `[IMPL]` `Identity.Infrastructure/Persistence/DataStoreFailures.cs`, used by `DataStoreExceptionHandler`, so that only outages and timeouts become 503 and every other database error is a 500. (T-62)
+- [x] **T-64** `[TEST]` `IT/Resilience/SlowDataStoreTests.cs` → `Login_WhenDataStoreSlow_ShouldReturnTemporaryErrorWithinBudget` and `Exchange_WhenDataStoreSlow_ShouldReturnTemporaryErrorWithinBudget` — a test interceptor delays every command; the response is 503 within the configured request timeout plus a margin. (Resilience H2)
+- [x] **T-65** `[IMPL]` Request timeouts (`Identity:Requests:Timeout`, default 10 s, 503 on expiry), 2 retries instead of 3, and an explicit connect timeout and pool size in the Compose connection string. (T-64)
+- [x] **T-66** `[TEST]` `IT/Isolation/ClientDirectoryTests.cs` → `ClientDirectory_WhenRuntimeRoleChangesEntry_ShouldBeRejected` (theory: UPDATE, DELETE) and `Application_WhenDirectoryNamesAnotherTenant_ShouldBeRejected`. (Isolation M1)
+- [x] **T-67** `[IMPL]` Migration `ClientDirectoryIntegrity`: `UNIQUE (tenant_id, client_id)` on `client_directory` and a foreign key from `openiddict_applications (tenant_id, client_id)` to it, so an application can only exist in the tenant its directory entry names. (T-66)
+- [x] **T-68** `[TEST]` `IT/Isolation/SignInRecordWriteTests.cs` → `Insert_WhenRowBelongsToAnotherTenant_ShouldBeRejected`, `UpdateAndDelete_WhenRowBelongsToAnotherTenant_ShouldAffectNothing` (theories over the three OpenIddict tables) and `Reference_WhenParentBelongsToAnotherTenant_ShouldBeRejected` (authorization → application, token → authorization). (Isolation M2)
+- [x] **T-69** `[TEST]` `IT/SignIn/UserInfoTests.cs` → `UserInfo_WhenSignedTokenNamesAnotherTenant_ShouldBeUnauthorized`; `IT/SignIn/AuthorizationRequestTests.cs` → `Authorize_WhenIdTokenHintFromAnotherTenant_ShouldNotAffectTenant`. (Isolation M3)
+- [x] **T-70** `[TEST]` `IT/Isolation/RlsCatalogTests.cs` → `Catalog_WhenInspected_ShouldHaveOnlyTheTenantPolicy` — exactly one permissive policy for all commands, with the expected `USING` and `WITH CHECK` expressions, on every tenant-owned table. (Isolation M4)
+- [x] **T-71** `[TEST]` `IT/SignIn/ClaimReleaseTests.cs` → `SignIn_WhenProfileScopeNotRequested_ShouldNotReleaseUsername` and `SignIn_WhenProfileScopeRequested_ShouldReleaseUsername` — ID token, access token and userinfo. (Security L2)
+- [x] **T-72** `[IMPL]` `AuthorizationEndpoints` adds `preferred_username` only with the `profile` scope; `UserInfoEndpoints` leaves out claims the token does not carry. (T-71)
+- [x] **T-73** `[TEST]` `IT/SignIn/SessionCookieTests.cs` → `SessionCookie_WhenProduction_ShouldUseHostPrefix` and `SessionCookie_WhenTesting_ShouldUsePlainName`. (Security L4)
+- [x] **T-74** `[IMPL]` Cookie name `__Host-identity.session` outside Development and Testing. (T-73)
+- [x] **T-75** `[TEST]` `IT/SignIn/AuthorizationRequestTests.cs` → `Authorize_WhenRequestIsPost_ShouldCompleteSignIn`. (Security, functional bug)
+- [x] **T-76** `[IMPL]` `AuthorizationEndpoints` rebuilds the login `returnUrl` from the form for POST requests. (T-75)
+- [x] **T-77** `[TEST]` `IT/Resilience/DataStoreOutageTests.cs` → `Health_WhenDatabaseUnavailable_ShouldBeLiveButNotReady` — live 200 and ready 503 within 3 s; the existing health tests move to `/health/ready`. (Resilience M1)
+- [x] **T-78** `[IMPL]` `/health/live` with no dependencies and `/health/ready` through `DataStoreProbe` (direct connection, `SELECT 1`, 2 s, no retries); Compose uses `/health/ready` and the `identity` service gets `restart: unless-stopped`. (T-77, resilience M3)
+- [x] **T-79** `[SETUP]` Update `02-technical-spec.md`, `services/identity/README.md` and the checklist with these changes and the deferred findings.
+
 ## Final verification
 - [x] **T-60** Run lint, build and the full test suite: `./dev.ps1 lint dotnet`, `./dev.ps1 build dotnet`, `./dev.ps1 test dotnet`.
-- [ ] **T-61** Before the PR, run `security-reviewer`, `tenant-isolation-auditor` and `resilience-reviewer`, as `CLAUDE.md` requires for security-sensitive code, and record the findings and fixes in the checklist.
+- [x] **T-61** Before the PR, run `security-reviewer`, `tenant-isolation-auditor` and `resilience-reviewer`, as `CLAUDE.md` requires for security-sensitive code, and record the findings and fixes in the checklist.
 
 ## AC coverage
 | AC | Test tasks |
@@ -171,3 +193,13 @@ Deviations and findings:
 - **Logs:** a failed sign-in logs only the tenant id, not the client id, because the client id comes from the request.
 - **Existing `.env` files:** the new required variables must be added by hand; `.env.example` and the root README say so.
 - **T-60:** `./dev.ps1 build dotnet` succeeded with 0 warnings, and `./dev.ps1 test dotnet` gave 64 passed and 0 failed. `./dev.ps1 lint` first failed on `dotnet format`'s charset rule: EF Core writes migrations with a UTF-8 BOM, and `.editorconfig` requires UTF-8 without one. The BOM was removed from the five generated files, and `./dev.ps1 lint` then passed. New migrations need the same fix.
+
+### T-61 to T-79: review findings (2026-11-11)
+The three reviewers found nothing critical and no cross-tenant path. The owner chose to fix eight findings in this feature (Group 12); the rest are deferred in the checklist. `./dev.ps1 lint dotnet` passed, `./dev.ps1 build dotnet` gave 0 warnings, and `./dev.ps1 test dotnet` gave 97 passed and 0 failed.
+
+- **Red first, as planned:** T-62, T-64, T-66 (foreign key), T-71, T-73, T-75 and T-77 failed for the expected reason before their fix. Without request timeouts, the slow data store tests took 1 minute (login) and 3 minutes (code exchange).
+- **Already protected, now tested:** the `UPDATE` and `DELETE` revoke on `client_directory`, cross-tenant writes and composite keys on the OpenIddict tables, a re-signed token naming another tenant, and the exact RLS policy expression all passed on their first run. They are regression tests for layers that had no direct test.
+- **T-69 deviation:** the planned `..._ShouldIssueNoCode` was wrong. OpenIddict validates an `id_token_hint` but discards it instead of rejecting the request when it fails, and the endpoint does not use hints. A tenant A hint therefore has no effect on a tenant B request; the test now asserts that the issued token is entirely tenant B. Answering `login_required` when a hint does not match the session is deferred with `prompt` and `max_age`.
+- **T-67:** the foreign key goes from `openiddict_applications (tenant_id, client_id)` to `client_directory`, not the other way round, so the seeder's order (entry first) still works and an application can never exist outside its entry's tenant. EF Core wrote the new migration with a UTF-8 BOM again; it was removed.
+- **T-74:** the cookie path is now set to `/` explicitly; with a `PathBase` the default would break the `__Host-` prefix.
+- **T-78:** `/health` is replaced by `/health/live` and `/health/ready`. The readiness probe uses its own unpooled connection with a 2-second budget and no retries, so it no longer logs an error through the exception handler on every probe during an outage.

@@ -12,13 +12,15 @@ namespace Identity.IntegrationTests.Infrastructure;
 /// <summary>Plays the browser and the public client in the Authorization Code + PKCE flow.</summary>
 public sealed partial class OidcTestClient(HttpClient browser)
 {
+    public string Scope { get; init; } = "openid profile";
+
     public string Verifier { get; } = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
 
     public string Challenge => WebEncoders.Base64UrlEncode(SHA256.HashData(Encoding.ASCII.GetBytes(Verifier)));
 
     public string AuthorizeUrl(string clientId, string? extraQuery = null)
     {
-        var url = $"/connect/authorize?client_id={clientId}&response_type=code&scope=openid%20profile" +
+        var url = $"/connect/authorize?client_id={clientId}&response_type=code&scope={Uri.EscapeDataString(Scope)}" +
             $"&redirect_uri={Uri.EscapeDataString(SeedData.RedirectUri)}&state=test-state" +
             $"&code_challenge={Challenge}&code_challenge_method=S256";
         return extraQuery is null ? url : $"{url}&{extraQuery}";

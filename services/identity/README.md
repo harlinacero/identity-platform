@@ -36,10 +36,11 @@ curl.exe http://localhost:5001/connect/userinfo -H "Authorization: Bearer <acces
 | --- | --- | --- |
 | GET, POST | `/connect/authorize` | Starts sign-in; requires PKCE with `S256` |
 | POST | `/connect/token` | Exchanges a code for tokens |
-| GET, POST | `/connect/userinfo` | Returns `sub`, `tenant_id` and `preferred_username` |
+| GET, POST | `/connect/userinfo` | Returns `sub`, `tenant_id`, and `preferred_username` with the `profile` scope |
 | GET, POST | `/account/login` | Temporary sign-in form |
 | GET | `/.well-known/openid-configuration`, `/.well-known/jwks` | Discovery and signing keys |
-| GET | `/health` | 200 when PostgreSQL is reachable, otherwise 503 |
+| GET | `/health/live` | 200 while the process runs; no dependency checks |
+| GET | `/health/ready` | 200 when PostgreSQL answers within 2 seconds, otherwise 503 |
 
 ## Configuration
 | Setting | Purpose | Default |
@@ -47,6 +48,7 @@ curl.exe http://localhost:5001/connect/userinfo -H "Authorization: Bearer <acces
 | `ConnectionStrings:Identity` | Connection as `identity_app` | Required |
 | `Identity:Issuer` | Token issuer | Required |
 | `Identity:Session:Duration` | Sign-in session duration | `00:15:00` |
+| `Identity:Requests:Timeout` | Time budget per request, retries included; 503 on expiry | `00:00:10` |
 | `Identity:Signing:CertificateBase64`, `Identity:Encryption:CertificateBase64` | PFX keys, Base64-encoded | Required in Production; ephemeral in Development and Testing |
 | `Seed:TenantA:UserPassword`, `Seed:TenantB:UserPassword` | Test user passwords | Required in Development and Testing |
 
@@ -56,6 +58,7 @@ Access tokens last 15 minutes and sign-in codes 5 minutes; both are fixed in cod
 - **Tenant source:** the OIDC client during sign-in, through `client_directory`, and the validated `tenant_id` claim afterwards. Any other tenant input is ignored.
 - **Two layers:** EF Core global query filters, and PostgreSQL Row-Level Security with `FORCE`. `TenantConnectionInterceptor` sets `app.tenant_id` on every connection that opens.
 - **Roles:** `identity_app` runs the service and cannot bypass RLS or change the schema. `identity_migrator` owns the schema and runs migrations.
+- **Client directory:** `identity_app` can add entries but never change or delete them, and an application can only exist in the tenant its entry names.
 - **Limit:** this approach is incompatible with PgBouncer in transaction mode (ADR-0006).
 
 A new tenant-owned table needs `ITenantOwned`, a query filter and `RowLevelSecuritySql.Enable` in its migration. `RlsCatalogTests` fails if the migration leaves RLS out.

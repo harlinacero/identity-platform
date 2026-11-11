@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Identity.Infrastructure.Seeding;
 using Identity.IntegrationTests.Infrastructure;
@@ -47,13 +48,13 @@ public sealed class DataStoreOutageTests
         // Act
         await database.StopDatabaseAsync();
         var response = await client.ExchangeAsync(SeedData.ClientAId, code);
-        var health = await factory.CreateBrowser().GetAsync("/health");
+        var ready = await factory.CreateBrowser().GetAsync("/health/ready");
         await database.StartDatabaseAsync();
 
         // Assert
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.DoesNotContain("access_token", await response.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, health.StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, ready.StatusCode);
 
         await using var context = TestDb.CreateContext(database.AppConnectionString, SeedData.TenantAId);
         Assert.Equal(0, await context.Tokens.CountAsync(token => token.Type == OpenIddictConstants.TokenTypeIdentifiers.AccessToken));
@@ -69,9 +70,35 @@ public sealed class DataStoreOutageTests
         await using var factory = new IdentityApiFactory(database.AppConnectionString);
 
         // Act
-        var response = await factory.CreateBrowser().GetAsync("/health");
+        var browser = factory.CreateBrowser();
+        var live = await browser.GetAsync("/health/live");
+        var ready = await browser.GetAsync("/health/ready");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, ready.StatusCode);
+    }
+
+    [Fact]
+    public async Task Health_WhenDatabaseUnavailable_ShouldBeLiveButNotReady()
+    {
+        // Arrange
+        var database = new PostgresFixture();
+        await database.InitializeAsync();
+        await using var cleanup = database;
+        await using var factory = new IdentityApiFactory(database.AppConnectionString);
+        var browser = factory.CreateBrowser();
+        await database.StopDatabaseAsync();
+        var stopwatch = Stopwatch.StartNew();
+
+        // Act
+        var ready = await browser.GetAsync("/health/ready");
+        var readyElapsed = stopwatch.Elapsed;
+        var live = await browser.GetAsync("/health/live");
+
+        // Assert: liveness must not depend on the database, or an outage would restart every replica.
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, ready.StatusCode);
+        Assert.True(readyElapsed < TimeSpan.FromSeconds(3), $"The readiness probe took {readyElapsed}.");
+        Assert.Equal(HttpStatusCode.OK, live.StatusCode);
     }
 }

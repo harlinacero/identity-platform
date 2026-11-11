@@ -13,7 +13,8 @@ public sealed class IdentityApiFactory(
     string environment = "Testing",
     IReadOnlyDictionary<string, string?>? settings = null,
     TimeProvider? timeProvider = null,
-    ILoggerProvider? loggerProvider = null) : WebApplicationFactory<Program>
+    ILoggerProvider? loggerProvider = null,
+    Action<IServiceCollection>? configureServices = null) : WebApplicationFactory<Program>
 {
     public const string TenantAPassword = "tenant-a-test-password";
     public const string TenantBPassword = "tenant-b-test-password";
@@ -43,6 +44,11 @@ public sealed class IdentityApiFactory(
         if (timeProvider is not null)
         {
             builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton(timeProvider)));
+        }
+
+        if (configureServices is not null)
+        {
+            builder.ConfigureTestServices(configureServices);
         }
     }
 

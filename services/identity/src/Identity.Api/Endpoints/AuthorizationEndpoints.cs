@@ -27,8 +27,13 @@ public static class AuthorizationEndpoints
         // A session is valid only for the tenant in which it started.
         if (!session.Succeeded || sessionTenant != tenant.TenantId?.ToString())
         {
+            // The login page returns here with a GET, so a POSTed request is carried over as a query string.
+            var parameters = HttpMethods.IsPost(context.Request.Method) && context.Request.HasFormContentType
+                ? QueryString.Create(await context.Request.ReadFormAsync(context.RequestAborted))
+                : context.Request.QueryString;
+
             return Results.Challenge(
-                new AuthenticationProperties { RedirectUri = context.Request.PathBase + context.Request.Path + context.Request.QueryString },
+                new AuthenticationProperties { RedirectUri = context.Request.PathBase + context.Request.Path + parameters },
                 [CookieAuthenticationDefaults.AuthenticationScheme]);
         }
 
@@ -41,8 +46,13 @@ public static class AuthorizationEndpoints
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         identity.AddClaim(new Claim(TenantClaims.TenantId, sessionTenant!)
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.PreferredUsername, session.Principal!.FindFirstValue(Claims.PreferredUsername)!)
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        // OIDC releases the username only with the profile scope.
+        if (request.HasScope(Scopes.Profile))
+        {
+            identity.AddClaim(new Claim(Claims.PreferredUsername, session.Principal!.FindFirstValue(Claims.PreferredUsername)!)
+                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+        }
 
         var principal = new ClaimsPrincipal(identity);
         principal.SetScopes(request.GetScopes());

@@ -1,15 +1,17 @@
+using Identity.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Storage;
-using Npgsql;
 
 namespace Identity.Api.Errors;
 
-/// <summary>Reports data store failures as a temporary error, without exposing their details.</summary>
+/// <summary>
+/// Reports data store outages and timeouts as a temporary error, without exposing their details.
+/// Permanent database errors fall through to the default handler and become a 500.
+/// </summary>
 public sealed class DataStoreExceptionHandler(ILogger<DataStoreExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        if (!IsDataStoreFailure(exception) || context.Response.HasStarted)
+        if (!DataStoreFailures.IsTransient(exception) || context.Response.HasStarted)
         {
             return false;
         }
@@ -21,18 +23,5 @@ public sealed class DataStoreExceptionHandler(ILogger<DataStoreExceptionHandler>
             new { title = "The service is temporarily unavailable. Try again later." },
             cancellationToken);
         return true;
-    }
-
-    private static bool IsDataStoreFailure(Exception exception)
-    {
-        for (var current = exception; current is not null; current = current.InnerException)
-        {
-            if (current is NpgsqlException or RetryLimitExceededException)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

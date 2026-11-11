@@ -43,12 +43,28 @@ public sealed class UserInfoTests(PostgresFixture database)
         var accessToken = await client.SignInForAccessTokenAsync(SeedData.ClientAId, SeedData.Username, IdentityApiFactory.TenantAPassword);
 
         // Act: re-signing with the server's key changes only what the test removes.
-        var resignedIntact = await client.UserInfoAsync(Resign(factory, accessToken, removeTenant: false));
-        var withoutTenant = await client.UserInfoAsync(Resign(factory, accessToken, removeTenant: true));
+        var resignedIntact = await client.UserInfoAsync(Resign(factory, accessToken, _ => { }));
+        var withoutTenant = await client.UserInfoAsync(Resign(factory, accessToken, payload => payload.Remove("tenant_id")));
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, resignedIntact.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, withoutTenant.StatusCode);
+    }
+
+    [Fact]
+    public async Task UserInfo_WhenSignedTokenNamesAnotherTenant_ShouldBeUnauthorized()
+    {
+        // Arrange: a validly signed token whose tenant claim no longer matches its stored entry.
+        await using var factory = new IdentityApiFactory(database.AppConnectionString);
+        var client = new OidcTestClient(factory.CreateBrowser());
+        var accessToken = await client.SignInForAccessTokenAsync(SeedData.ClientAId, SeedData.Username, IdentityApiFactory.TenantAPassword);
+        var otherTenant = Resign(factory, accessToken, payload => payload["tenant_id"] = SeedData.TenantBId.ToString());
+
+        // Act
+        var response = await client.UserInfoAsync(otherTenant);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -101,14 +117,11 @@ public sealed class UserInfoTests(PostgresFixture database)
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    private static string Resign(IdentityApiFactory factory, string accessToken, bool removeTenant)
+    private static string Resign(IdentityApiFactory factory, string accessToken, Action<JsonObject> change)
     {
         var options = factory.Services.GetRequiredService<IOptionsMonitor<OpenIddictServerOptions>>().CurrentValue;
         var payload = JsonNode.Parse(WebEncoders.Base64UrlDecode(accessToken.Split('.')[1]))!.AsObject();
-        if (removeTenant)
-        {
-            payload.Remove("tenant_id");
-        }
+        change(payload);
 
         return new JsonWebTokenHandler().CreateToken(
             payload.ToJsonString(),

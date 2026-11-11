@@ -14,7 +14,7 @@ namespace Identity.Infrastructure;
 public static class InfrastructureServiceCollectionExtensions
 {
     private const int CommandTimeoutSeconds = 5;
-    private const int MaxRetries = 3;
+    private const int MaxRetries = 2;
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(1);
 
     public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services)
@@ -47,6 +47,7 @@ public static class InfrastructureServiceCollectionExtensions
             core.DisableEntityCaching();
         });
 
+        services.AddSingleton<DataStoreProbe>();
         services.AddScoped<IClientDirectory, ClientDirectory>();
         services.AddScoped<ILocalUserRepository, LocalUserRepository>();
         services.AddScoped<ValidateCredentialsHandler>();

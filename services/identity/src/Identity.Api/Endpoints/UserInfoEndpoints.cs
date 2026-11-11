@@ -17,11 +17,12 @@ public static class UserInfoEndpoints
         var result = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         var principal = result.Principal!;
 
-        return Results.Json(new Dictionary<string, string?>
-        {
-            [Claims.Subject] = principal.FindFirstValue(Claims.Subject),
-            [TenantClaims.TenantId] = principal.FindFirstValue(TenantClaims.TenantId),
-            [Claims.PreferredUsername] = principal.FindFirstValue(Claims.PreferredUsername),
-        });
+        // Returns only the claims the token carries, which already reflect the granted scopes.
+        var claims = new[] { Claims.Subject, TenantClaims.TenantId, Claims.PreferredUsername }
+            .Select(type => (Type: type, Value: principal.FindFirstValue(type)))
+            .Where(claim => claim.Value is not null)
+            .ToDictionary(claim => claim.Type, claim => claim.Value);
+
+        return Results.Json(claims);
     }
 }

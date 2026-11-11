@@ -1,6 +1,8 @@
 using System.Net;
+using System.Text.Json;
 using Identity.Infrastructure.Seeding;
 using Identity.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Identity.IntegrationTests.SignIn;
 
@@ -75,6 +77,57 @@ public sealed class AuthorizationRequestTests(PostgresFixture database)
 
         // Assert
         await AssertRejectedAsInvalidAsync(response);
+    }
+
+    [Fact]
+    public async Task Authorize_WhenIdTokenHintFromAnotherTenant_ShouldNotAffectTenant()
+    {
+        // Arrange: an ID token from tenant A, and a browser signed in to tenant B.
+        await using var factory = new IdentityApiFactory(database.AppConnectionString);
+        var tenantAClient = new OidcTestClient(factory.CreateBrowser());
+        var tenantACode = await tenantAClient.SignInForCodeAsync(SeedData.ClientAId, SeedData.Username, IdentityApiFactory.TenantAPassword);
+        var exchange = await tenantAClient.ExchangeAsync(SeedData.ClientAId, tenantACode);
+        using var tokens = JsonDocument.Parse(await exchange.Content.ReadAsStringAsync());
+        var tenantAIdToken = tokens.RootElement.GetProperty("id_token").GetString()!;
+
+        var browser = factory.CreateBrowser();
+        var tenantBClient = new OidcTestClient(browser);
+        await tenantBClient.SignInForCodeAsync(SeedData.ClientBId, SeedData.Username, IdentityApiFactory.TenantBPassword);
+
+        // Act
+        var response = await tenantBClient.StartAsync(SeedData.ClientBId, $"id_token_hint={tenantAIdToken}");
+
+        // Assert
+        // OpenIddict discards a hint that fails validation, so the request stays entirely in tenant B.
+        var accessToken = await ReadAccessTokenAsync(await tenantBClient.ExchangeAsync(SeedData.ClientBId, OidcTestClient.CodeFrom(response)));
+        Assert.Equal(SeedData.TenantBId.ToString(), OidcTestClient.ReadJwtPayload(accessToken).GetProperty("tenant_id").GetString());
+    }
+
+    [Fact]
+    public async Task Authorize_WhenRequestIsPost_ShouldCompleteSignIn()
+    {
+        // Arrange
+        await using var factory = new IdentityApiFactory(database.AppConnectionString);
+        var browser = factory.CreateBrowser();
+        var client = new OidcTestClient(browser);
+        var parameters = QueryHelpers.ParseQuery(new Uri(new Uri("http://localhost"), client.AuthorizeUrl(SeedData.ClientAId)).Query)
+            .ToDictionary(parameter => parameter.Key, parameter => parameter.Value.ToString());
+
+        // Act
+        var start = await browser.PostAsync("/connect/authorize", new FormUrlEncodedContent(parameters));
+        var login = await client.SubmitCredentialsAsync(OidcTestClient.LocationOf(start), SeedData.Username, IdentityApiFactory.TenantAPassword);
+        var authorize = await browser.GetAsync(OidcTestClient.LocationOf(login));
+        var exchange = await client.ExchangeAsync(SeedData.ClientAId, OidcTestClient.CodeFrom(authorize));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, exchange.StatusCode);
+    }
+
+    private static async Task<string> ReadAccessTokenAsync(HttpResponseMessage exchange)
+    {
+        Assert.Equal(HttpStatusCode.OK, exchange.StatusCode);
+        using var json = JsonDocument.Parse(await exchange.Content.ReadAsStringAsync());
+        return json.RootElement.GetProperty("access_token").GetString()!;
     }
 
     private static async Task AssertRejectedAsInvalidAsync(HttpResponseMessage response)
