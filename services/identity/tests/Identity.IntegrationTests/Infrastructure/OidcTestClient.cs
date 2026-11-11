@@ -28,20 +28,24 @@ public sealed partial class OidcTestClient(HttpClient browser)
         browser.GetAsync(AuthorizeUrl(clientId, extraQuery));
 
     /// <summary>Runs the flow up to the login form and submits the credentials.</summary>
-    public async Task<HttpResponseMessage> SubmitCredentialsAsync(string loginUrl, string username, string password)
+    public async Task<HttpResponseMessage> SubmitCredentialsAsync(string loginUrl, string username, string password) =>
+        await PostLoginAsync(await ReadLoginFormAsync(loginUrl), username, password);
+
+    public async Task<string> ReadLoginFormAsync(string loginUrl)
     {
         var form = await browser.GetAsync(loginUrl);
         Assert.Equal(HttpStatusCode.OK, form.StatusCode);
-        var html = await form.Content.ReadAsStringAsync();
+        return await form.Content.ReadAsStringAsync();
+    }
 
-        return await browser.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string>
+    public Task<HttpResponseMessage> PostLoginAsync(string formHtml, string username, string password) =>
+        browser.PostAsync("/account/login", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["username"] = username,
             ["password"] = password,
-            ["returnUrl"] = HiddenField(html, "returnUrl"),
-            ["__RequestVerificationToken"] = HiddenField(html, "__RequestVerificationToken"),
+            ["returnUrl"] = HiddenField(formHtml, "returnUrl"),
+            ["__RequestVerificationToken"] = HiddenField(formHtml, "__RequestVerificationToken"),
         }));
-    }
 
     /// <summary>Signs in from the start and returns the code sent to the client.</summary>
     public async Task<string> SignInForCodeAsync(string clientId, string username, string password)

@@ -1,12 +1,38 @@
 # Application services and frontends. Each one is added here when its code and
-# multi-stage Dockerfile exist (see ADR-0005), for example:
-#
-#   identity:
-#     build: ./services/identity
-#     env_file: .env
-#     depends_on:
-#       postgres:
-#         condition: service_healthy
+# multi-stage Dockerfile exist (see ADR-0005). Services receive only the settings they need.
 name: identity-platform
 
-services: {}
+services:
+  identity-migrations:
+    build:
+      context: ./services/identity
+      target: migrations
+    environment:
+      MIGRATOR_CONNECTION_STRING: Host=postgres;Database=${POSTGRES_DB:-identity};Username=identity_migrator;Password=${IDENTITY_MIGRATOR_PASSWORD:?}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  identity:
+    build:
+      context: ./services/identity
+      target: service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Identity: Host=postgres;Database=${POSTGRES_DB:-identity};Username=identity_app;Password=${IDENTITY_APP_PASSWORD:?};Timeout=5
+      Identity__Issuer: http://localhost:${IDENTITY_PORT:-5001}/
+      Identity__Session__Duration: ${IDENTITY_SESSION_DURATION:-00:15:00}
+      Seed__TenantA__UserPassword: ${SEED_TENANT_A_USER_PASSWORD:?}
+      Seed__TenantB__UserPassword: ${SEED_TENANT_B_USER_PASSWORD:?}
+    ports:
+      - "127.0.0.1:${IDENTITY_PORT:-5001}:8080"
+    depends_on:
+      identity-migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      # The runtime image has no HTTP client, and bash can make the request by itself.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s

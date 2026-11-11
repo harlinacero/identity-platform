@@ -35,4 +35,18 @@ public sealed class RuntimeRoleTests(PostgresFixture database)
         Assert.Equal(0, ownedTables);
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, ddlError.SqlState);
     }
+
+    [Fact]
+    public async Task RuntimeRole_WhenConnectingToAnotherServiceDatabase_ShouldBeRejected()
+    {
+        // Arrange
+        var connectionString = database.AppConnectionStringWith(builder => builder.Database = "tenants_users");
+        await using var connection = new NpgsqlConnection(connectionString);
+
+        // Act
+        var error = await Assert.ThrowsAsync<PostgresException>(() => connection.OpenAsync());
+
+        // Assert
+        Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, error.SqlState);
+    }
 }

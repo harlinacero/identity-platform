@@ -1,4 +1,5 @@
 using Identity.Api.Endpoints;
+using Identity.Api.Errors;
 using Identity.Api.Middleware;
 using Identity.Api.OpenIddict;
 using Identity.Api.Options;
@@ -28,9 +29,12 @@ builder.Services
         options.SlidingExpiration = false;
     });
 builder.Services.AddAuthorization();
+builder.Services.AddExceptionHandler<DataStoreExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -39,6 +43,7 @@ app.MapAuthorizationEndpoints();
 app.MapTokenEndpoints();
 app.MapUserInfoEndpoints();
 app.MapLoginEndpoints();
+app.MapHealthEndpoints();
 
 app.Run();
 

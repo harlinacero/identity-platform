@@ -46,50 +46,50 @@ Paths are relative to `services/identity/`, unless they start at the repository 
 - [x] **T-28** **STOP GATE (BR-13).** If T-25 or T-26 can't pass within the approved design, stop all further tasks, record the evidence below in Implementation notes, and bring it to the owner. If they pass, record the results and close R-01 in the technical spec and ADR-0006. (AC-31)
 
 ## Group 6 — Tenant boundaries at sign-in (AC-06, AC-07, AC-08, AC-09, AC-13, AC-14, AC-32)
-- [ ] **T-29** `[TEST]` `IT/SignIn/SessionTests.cs` → `Authorize_WhenSessionInSameTenant_ShouldNotAskForCredentials` — redirects to the client with a code. (AC-06)
-- [ ] **T-30** `[TEST]` Same file → `Authorize_WhenSessionInAnotherTenant_ShouldAskForCredentials` — redirects to the login form and issues no code. (AC-07)
-- [ ] **T-31** `[TEST]` Same file → `Authorize_WhenSessionOlderThanDefault_ShouldAskForCredentials` and `Authorize_WhenSessionOlderThanConfiguredDuration_ShouldAskForCredentials` — using `FakeTimeProvider`. (AC-32)
-- [ ] **T-32** `[IMPL]` Session cookie options, `SessionOptions` and the tenant comparison in `AuthorizationEndpoints`. (T-29 to T-31)
-- [ ] **T-33** `[TEST]` `IT/SignIn/TenantInputTests.cs` → `SignIn_WhenRequestStatesAnotherTenant_ShouldUseClientTenant` — tenant A credentials give a tenant A result; tenant B credentials fail. (AC-08)
-- [ ] **T-34** `[TEST]` `IT/SignIn/CredentialsTests.cs` → `Login_WhenPasswordWrong_ShouldShowGenericErrorAndAllowRetry`. (AC-09)
-- [ ] **T-35** `[TEST]` Same file → `Login_WhenPasswordBelongsToSameUsernameInOtherTenant_ShouldFail`. (AC-13)
-- [ ] **T-36** `[TEST]` Same file → `Login_WhenUsernameUnknown_ShouldReturnSameResponseAsWrongPassword` — same status and same body, apart from the antiforgery token. (AC-14)
-- [ ] **T-37** `[TEST]` `UT/Users/ValidateCredentialsHandlerTests.cs` → `Handle_WhenUserMissing_ShouldStillRunPasswordVerification`. (AC-14)
-- [ ] **T-38** `[IMPL]` Any corrections to the login endpoints and handler, including the dummy hash. (T-33 to T-37)
+- [x] **T-29** `[TEST]` `IT/SignIn/SessionTests.cs` → `Authorize_WhenSessionInSameTenant_ShouldNotAskForCredentials` — redirects to the client with a code. (AC-06)
+- [x] **T-30** `[TEST]` Same file → `Authorize_WhenSessionInAnotherTenant_ShouldAskForCredentials` — redirects to the login form and issues no code. (AC-07)
+- [x] **T-31** `[TEST]` Same file → `Authorize_WhenSessionOlderThanDefault_ShouldAskForCredentials` and `Authorize_WhenSessionOlderThanConfiguredDuration_ShouldAskForCredentials` — using `FakeTimeProvider`. (AC-32)
+- [x] **T-32** `[IMPL]` Session cookie options, `SessionOptions` and the tenant comparison in `AuthorizationEndpoints`. (T-29 to T-31)
+- [x] **T-33** `[TEST]` `IT/SignIn/TenantInputTests.cs` → `SignIn_WhenRequestStatesAnotherTenant_ShouldUseClientTenant` — tenant A credentials give a tenant A result; tenant B credentials fail. (AC-08)
+- [x] **T-34** `[TEST]` `IT/SignIn/CredentialsTests.cs` → `Login_WhenPasswordWrong_ShouldShowGenericErrorAndAllowRetry`. (AC-09)
+- [x] **T-35** `[TEST]` Same file → `Login_WhenPasswordBelongsToSameUsernameInOtherTenant_ShouldFail`. (AC-13)
+- [x] **T-36** `[TEST]` Same file → `Login_WhenUsernameUnknown_ShouldReturnSameResponseAsWrongPassword` — same status and same body, apart from the antiforgery token. (AC-14)
+- [x] **T-37** `[TEST]` `UT/Users/ValidateCredentialsHandlerTests.cs` → `Handle_WhenUserMissing_ShouldStillRunPasswordVerification`. (AC-14)
+- [x] **T-38** `[IMPL]` Any corrections to the login endpoints and handler, including the dummy hash. (T-33 to T-37)
 
 ## Group 7 — Rejected sign-in requests (AC-10, AC-11, AC-12)
-- [ ] **T-39** `[TEST]` `IT/SignIn/AuthorizationRequestTests.cs` → `Authorize_WhenClientUnknown_ShouldRejectWithoutRedirect`. (AC-10)
-- [ ] **T-40** `[TEST]` Same file → `Authorize_WhenRedirectUriDiffers_ShouldRejectWithoutRedirect` — as a theory: different path, added query, different case, different port. (AC-11)
-- [ ] **T-41** `[TEST]` Same file → `Authorize_WhenChallengeMissing_ShouldReject` and `Authorize_WhenChallengeMethodPlain_ShouldReject`. (AC-12)
-- [ ] **T-42** `[TEST]` `IT/SignIn/LoginReturnUrlTests.cs` → `Login_WhenReturnUrlIsNotLocalAuthorize_ShouldReject` — covers external and other local URLs. (Security section of the technical spec)
-- [ ] **T-43** `[IMPL]` Any corrections to the server configuration and `returnUrl` validation. (T-39 to T-42)
+- [x] **T-39** `[TEST]` `IT/SignIn/AuthorizationRequestTests.cs` → `Authorize_WhenClientUnknown_ShouldRejectWithoutRedirect`. (AC-10)
+- [x] **T-40** `[TEST]` Same file → `Authorize_WhenRedirectUriDiffers_ShouldRejectWithoutRedirect` — as a theory: different path, added query, different case, different port. (AC-11)
+- [x] **T-41** `[TEST]` Same file → `Authorize_WhenChallengeMissing_ShouldReject` and `Authorize_WhenChallengeMethodPlain_ShouldReject`. (AC-12)
+- [x] **T-42** `[TEST]` `IT/SignIn/LoginReturnUrlTests.cs` → `Login_WhenReturnUrlIsNotLocalAuthorize_ShouldReject` — covers external and other local URLs. (Security section of the technical spec)
+- [x] **T-43** `[IMPL]` Any corrections to the server configuration and `returnUrl` validation. (T-39 to T-42)
 
 ## Group 8 — Code exchange (AC-15, AC-16, AC-17, AC-18)
-- [ ] **T-44** `[TEST]` `IT/SignIn/CodeExchangeTests.cs` → `Exchange_WhenVerifierDoesNotMatch_ShouldIssueNoToken`. (AC-15)
-- [ ] **T-45** `[TEST]` Same file → `Exchange_WhenCodeOlderThanFiveMinutes_ShouldBeRejected` — using `FakeTimeProvider`. (AC-16)
-- [ ] **T-46** `[TEST]` Same file → `Exchange_WhenCodeAlreadyUsed_ShouldBeRejected`. (AC-17; also exercises R-02)
-- [ ] **T-47** `[TEST]` Same file → `Exchange_WhenPresentedByOtherTenantClient_ShouldBeRejected`. (AC-18)
-- [ ] **T-48** `[IMPL]` Any corrections to the handler and server configuration. (T-44 to T-47)
+- [x] **T-44** `[TEST]` `IT/SignIn/CodeExchangeTests.cs` → `Exchange_WhenVerifierDoesNotMatch_ShouldIssueNoToken`. (AC-15)
+- [x] **T-45** `[TEST]` Same file → `Exchange_WhenCodeOlderThanFiveMinutes_ShouldBeRejected` — using `FakeTimeProvider`. (AC-16)
+- [x] **T-46** `[TEST]` Same file → `Exchange_WhenCodeAlreadyUsed_ShouldBeRejected`. (AC-17; also exercises R-02)
+- [x] **T-47** `[TEST]` Same file → `Exchange_WhenPresentedByOtherTenantClient_ShouldBeRejected`. (AC-18)
+- [x] **T-48** `[IMPL]` Any corrections to the handler and server configuration. (T-44 to T-47)
 
 ## Group 9 — Identity requests (AC-22, AC-23, AC-24)
-- [ ] **T-49** `[TEST]` `IT/SignIn/UserInfoTests.cs` → `UserInfo_WhenTokenHasNoTenant_ShouldBeUnauthorized` — a token validly signed with the test key but without `tenant_id`. (AC-22)
-- [ ] **T-50** `[TEST]` Same file → `UserInfo_WhenTokenExpired_ShouldBeUnauthorized` and `UserInfo_WhenTokenAltered_ShouldBeUnauthorized`. (AC-23)
-- [ ] **T-51** `[TEST]` Same file → `UserInfo_WhenNoToken_ShouldBeUnauthorized`. (AC-24)
-- [ ] **T-52** `[IMPL]` Any corrections to `TenantTokenValidationHandler`. (T-49 to T-51)
+- [x] **T-49** `[TEST]` `IT/SignIn/UserInfoTests.cs` → `UserInfo_WhenTokenHasNoTenant_ShouldBeUnauthorized` — a token validly signed with the test key but without `tenant_id`. (AC-22)
+- [x] **T-50** `[TEST]` Same file → `UserInfo_WhenTokenExpired_ShouldBeUnauthorized` and `UserInfo_WhenTokenAltered_ShouldBeUnauthorized`. (AC-23)
+- [x] **T-51** `[TEST]` Same file → `UserInfo_WhenNoToken_ShouldBeUnauthorized`. (AC-24)
+- [x] **T-52** `[IMPL]` Any corrections to `TenantTokenValidationHandler`. (T-49 to T-51)
 
 ## Group 10 — Data store outage (AC-19)
-- [ ] **T-53** `[TEST]` `IT/Resilience/DataStoreOutageTests.cs` → `Login_WhenDatabaseUnavailable_ShouldReturnTemporaryErrorAndCreateNothing` and `Exchange_WhenDatabaseUnavailable_ShouldReturnTemporaryError` — stops the container, then restarts it and checks that no session cookie, code or token exists. (AC-19; also exercises R-02)
-- [ ] **T-54** `[IMPL]` `DataStoreExceptionHandler`, the command timeout and retry settings. (T-53)
+- [x] **T-53** `[TEST]` `IT/Resilience/DataStoreOutageTests.cs` → `Login_WhenDatabaseUnavailable_ShouldReturnTemporaryErrorAndCreateNothing` and `Exchange_WhenDatabaseUnavailable_ShouldReturnTemporaryError` — stops the container, then restarts it and checks that no session cookie, code or token exists. (AC-19; also exercises R-02)
+- [x] **T-54** `[IMPL]` `DataStoreExceptionHandler`, the command timeout and retry settings. (T-53)
 
 ## Group 11 — Running it and documentation
-- [ ] **T-55** `[SETUP]` Multi-stage `Dockerfile` with an image target for the service and one for the migrations bundle.
-- [ ] **T-56** `[SETUP]` Repository root `.env.example` and `deploy/compose/docker-compose.services.yml` — add `identity-migrations` and `identity`, with `/health` as the healthcheck.
-- [ ] **T-57** `[SETUP]` Run `./dev.ps1 up` from an empty volume and resolve R-03. Update the technical spec with the result.
-- [ ] **T-58** `[SETUP]` `services/identity/README.md` — endpoints, configuration, roles, how to run it and how to try a sign-in. Update the repository root `README.md` where it describes Quick start or configuration, and add the `features/` folder to `docs/repository-structure.md`.
-- [ ] **T-59** `[SETUP]` Update `02-technical-spec.md` and ADR-0006 with anything that changed during implementation, including R-01 and R-02.
+- [x] **T-55** `[SETUP]` Multi-stage `Dockerfile` with an image target for the service and one for the migrations bundle.
+- [x] **T-56** `[SETUP]` Repository root `.env.example` and `deploy/compose/docker-compose.services.yml` — add `identity-migrations` and `identity`, with `/health` as the healthcheck.
+- [x] **T-57** `[SETUP]` Run `./dev.ps1 up` from an empty volume and resolve R-03. Update the technical spec with the result.
+- [x] **T-58** `[SETUP]` `services/identity/README.md` — endpoints, configuration, roles, how to run it and how to try a sign-in. Update the repository root `README.md` where it describes Quick start or configuration, and add the `features/` folder to `docs/repository-structure.md`.
+- [x] **T-59** `[SETUP]` Update `02-technical-spec.md` and ADR-0006 with anything that changed during implementation, including R-01 and R-02.
 
 ## Final verification
-- [ ] **T-60** Run lint, build and the full test suite: `./dev.ps1 lint dotnet`, `./dev.ps1 build dotnet`, `./dev.ps1 test dotnet`.
+- [x] **T-60** Run lint, build and the full test suite: `./dev.ps1 lint dotnet`, `./dev.ps1 build dotnet`, `./dev.ps1 test dotnet`.
 - [ ] **T-61** Before the PR, run `security-reviewer`, `tenant-isolation-auditor` and `resilience-reviewer`, as `CLAUDE.md` requires for security-sensitive code, and record the findings and fixes in the checklist.
 
 ## AC coverage
@@ -145,3 +145,29 @@ RLS works with OpenIddict's stores within the approved design. All 26 tests pass
 - **Naming:** `SessionOptions` became `IdentitySessionOptions`, because the original name clashes with an ASP.NET Core type.
 - **Additions:** `Verify_WhenPasswordRight_ShouldSucceed` and `Set_WhenSameTenantSetAgain_ShouldKeepIt`; and the migrations revoke `identity_app`'s access to `__EFMigrationsHistory`, for AC-30.
 - **`ValidateCredentialsHandler`:** written with its dummy hash in T-24, so T-37 must be checked by disabling the dummy hash.
+
+### T-29 to T-59 (2026-11-04 and 2026-11-05)
+Most of these tests passed on their first run, because OpenIddict already provides the behaviour. Each such protection was checked by disabling it temporarily (mutation) and confirming the expected test failed. All six were restored afterwards:
+
+| Mutation | Failed as expected |
+|----------|--------------------|
+| M1: no dummy hash for unknown users | `Handle_WhenUserMissing_ShouldStillRunPasswordVerification` |
+| M2: session not tied to its tenant | `Authorize_WhenSessionInAnotherTenant_ShouldAskForCredentials` |
+| M3: configured session duration ignored | Both `Authorize_WhenSessionOlderThan...` tests |
+| M4: `plain` PKCE method allowed | `Authorize_WhenChallengeMethodPlain_ShouldReject` |
+| M5: no `TenantTokenValidationHandler` | `UserInfo_WhenTokenHasNoTenant_...`, `UserInfo_WhenTokenValid_...` and the RLS proof |
+| M6: tenant taken from request input | `SignIn_WhenRequestStatesAnotherTenant_ShouldUseClientTenant` |
+
+Without the handler (M5), `Exchange_WhenPresentedByOtherTenantClient_ShouldBeRejected` still passes, because OpenIddict's own client check and RLS also reject it. The handler is one of three layers there.
+
+Deviations and findings:
+- **AC-12 (T-41):** OpenIddict rejects a missing or `plain` challenge with 400 and no redirect, not with an error redirect to the client. Both are a rejection as invalid, and the test asserts what OpenIddict does.
+- **T-38:** a missing antiforgery token returned 500; it now returns 400, covered by the new `Login_WhenAntiforgeryTokenMissing_ShouldReject`.
+- **T-54:** data store failures return 503 through `DataStoreExceptionHandler`, with a 5-second command timeout and up to 3 retries. `/health` was added here, with `Health_WhenDatabaseAvailable_ShouldBeHealthy`.
+- **R-02 closed:** the retrying strategy did not conflict with OpenIddict. Code replay (T-46) and the outage tests (T-53) pass with retries on.
+- **R-03 closed:** `./dev.ps1 up` from empty volumes exits 0 in 104 seconds, with `identity-migrations` exiting 0 and `identity` healthy. The runtime image has no HTTP client, so the healthcheck uses bash.
+- **Finding from the real run (T-57):** OpenIddict logged the `code_verifier` in plain text at Information level, which breaks rule 9 of `CLAUDE.md`. `appsettings.json` now sets OpenIddict, EF Core and ASP.NET Core logs to Warning, and `Logs_WhenSignInCompletes_ShouldNotContainSecrets` covers the verifier, code, access token and password. A repeated real sign-in found none of them in the container logs.
+- **Gap closed:** `identity_app` could connect to `tenants_users`, because PostgreSQL allows any role to connect by default. `01-create-databases.sql` now revokes it, covered by `RuntimeRole_WhenConnectingToAnotherServiceDatabase_ShouldBeRejected`.
+- **Logs:** a failed sign-in logs only the tenant id, not the client id, because the client id comes from the request.
+- **Existing `.env` files:** the new required variables must be added by hand; `.env.example` and the root README say so.
+- **T-60:** `./dev.ps1 build dotnet` succeeded with 0 warnings, and `./dev.ps1 test dotnet` gave 64 passed and 0 failed. `./dev.ps1 lint` first failed on `dotnet format`'s charset rule: EF Core writes migrations with a UTF-8 BOM, and `.editorconfig` requires UTF-8 without one. The BOM was removed from the five generated files, and `./dev.ps1 lint` then passed. New migrations need the same fix.

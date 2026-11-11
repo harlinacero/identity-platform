@@ -62,7 +62,7 @@ All paths are under `services/identity/`.
 ## 3. API contract
 | Method | Route | Auth | Request | Response | Errors |
 |--------|-------|------|---------|----------|--------|
-| GET | `/connect/authorize` | Session cookie, if any | OIDC parameters; `code_challenge` with `S256` required | 302 to `redirect_uri` with `code`, or 302 to `/account/login` | 400 and no redirect for an unknown client or unregistered `redirect_uri`; OIDC `invalid_request` for a missing or weak challenge |
+| GET | `/connect/authorize` | Session cookie, if any | OIDC parameters; `code_challenge` with `S256` required | 302 to `redirect_uri` with `code`, or 302 to `/account/login` | 400 and no redirect for an unknown client, an unregistered `redirect_uri`, or a missing or `plain` challenge (`invalid_request`) |
 | POST | `/connect/token` | None (public client) | `grant_type=authorization_code`, `code`, `client_id`, `redirect_uri`, `code_verifier` | 200 with `access_token`, `token_type`, `expires_in` | 400 `invalid_grant` for a bad verifier, or an expired, used or foreign code; 503 |
 | GET, POST | `/connect/userinfo` | Bearer token | — | 200 with `sub`, `tenant_id`, `preferred_username` | 401 |
 | GET | `/account/login` | None | `returnUrl`, local and under `/connect/authorize` | 200 HTML form | 400 for any other `returnUrl` |
@@ -100,7 +100,7 @@ Tokens and authorizations reference their parents with composite foreign keys th
 
 Roles, created by `02-identity-roles.sh`:
 - `identity_migrator` owns the schema and runs migrations.
-- `identity_app` is what the service uses at runtime: `NOSUPERUSER NOBYPASSRLS`, DML on these tables only, and `SELECT, INSERT` without `UPDATE` or `DELETE` on `client_directory`.
+- `identity_app` is what the service uses at runtime: `NOSUPERUSER NOBYPASSRLS`, DML on these tables only, `SELECT, INSERT` without `UPDATE` or `DELETE` on `client_directory`, no access to `__EFMigrationsHistory`, and no connection to other services' databases.
 
 ## 5. Inter-service impact
 | Service | Change | Mechanism (event / HTTP) | Contract |
@@ -145,7 +145,7 @@ Compose adds `identity-migrations` (one-shot bundle) and `identity`, which depen
 - **OpenIddict entity cache:** disabled with `DisableEntityCaching()`. It is in-process and its keys don't include the tenant, so it would bypass both isolation layers.
 - **Passwords:** PBKDF2-HMAC-SHA512 with 210,000 iterations, the current OWASP guidance.
 - **HTTPS:** enforced by OpenIddict, and relaxed only in Development and Testing, where no TLS proxy exists yet.
-- **Logs:** never include passwords, codes, verifiers or tokens.
+- **Logs:** never include passwords, codes, verifiers or tokens. OpenIddict logs request parameters at Information level, so `appsettings.json` keeps OpenIddict, EF Core and ASP.NET Core at Warning; a test checks the logs of a complete sign-in.
 - **Seeder:** runs only when the environment is Development or Testing. There is no flag that could turn it on in Production.
 
 ## 8. Error handling & logging
@@ -188,7 +188,7 @@ All tests are integration tests against real PostgreSQL unless stated otherwise.
 - **D-03 — Userinfo sets the tenant inside OpenIddict's pipeline.** OpenIddict looks up the token entry before any endpoint code runs (first in `RestoreTokenEntryProperties`), so the context comes from the signature-validated token in a handler ordered just before it.
 - **D-04 — No token pruning in this feature.** OpenIddict's pruning runs across tenants and would need tenant context per unit of work. Expired rows accumulate until a later feature adds it.
 - **R-01 — RLS with OpenIddict: closed on 2026-11-04.** Complete sign-ins pass with RLS enforced and through the runtime role, also with every EF Core filter removed. Removing RLS from a table makes the proof fail. See the T-28 notes in `03-tasks.md`.
-- **R-02 — The retrying strategy and OpenIddict's own explicit transactions may conflict.** EF Core rejects user transactions under a retrying strategy unless they run inside it. AC-17 and AC-19 exercise this path. If they conflict, retries get limited or removed, and this spec gets updated.
-- **R-03 — `docker compose up --wait` with a one-shot service may report failure** when `identity-migrations` exits, which would break `./dev.ps1 up`. This needs checking during implementation; the alternative is a `depends_on` condition without the service in the wait set.
+- **R-02 — Retries and OpenIddict transactions: closed on 2026-11-04.** No conflict; code replay and outage tests pass with retries on.
+- **R-03 — `up --wait` with a one-shot service: closed on 2026-11-05.** `./dev.ps1 up` exits 0 from empty volumes, with the migrations container exiting 0.
 - **R-04 — Sessions and antiforgery tokens don't survive a restart** until data protection keys are persisted. This is acceptable with 15-minute sessions and a temporary form.
 - **R-05 — The temporary `/account/login` form is replaced by React later.** Its endpoints are kept small for that reason.

@@ -78,6 +78,8 @@ On Windows, in PowerShell:
 
 On Linux or macOS, the same commands work with Make: `make infra`, `make up`, `make k8s-up`. The first run creates `.env` from `.env.example`.
 
+If you already have a `.env`, compare it with `.env.example` after pulling changes: Compose stops and names any required variable that is missing.
+
 If PowerShell blocks the script, run it with `powershell -ExecutionPolicy Bypass -File .\dev.ps1 infra`.
 
 Run a service's tools without installing them:
@@ -90,6 +92,7 @@ Run a service's tools without installing them:
 
 | Local URL | Service |
 | --- | --- |
+| http://localhost:5001 | Identity ([how to try a sign-in](services/identity/README.md)) |
 | http://localhost:8025 | Mailpit inbox |
 | http://localhost:15672 | RabbitMQ management |
 | https://localhost:9200 | OpenSearch API (self-signed certificate) |

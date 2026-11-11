@@ -1,7 +1,6 @@
 using Identity.Application.Tenancy;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
-using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Identity.Api.OpenIddict;
 
@@ -37,6 +36,6 @@ public sealed class TenantTokenValidationHandler(ITenantContext current, ITenant
 
     private static void Reject(OpenIddictServerEvents.ValidateTokenContext context, string description) =>
         context.Reject(
-            error: context.EndpointType is OpenIddictServerEndpointType.Token ? Errors.InvalidGrant : Errors.InvalidToken,
+            error: context.EndpointType is OpenIddictServerEndpointType.Token ? OpenIddictConstants.Errors.InvalidGrant : OpenIddictConstants.Errors.InvalidToken,
             description: description);
 }

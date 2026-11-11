@@ -19,7 +19,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithDatabase(Database)
         .WithEnvironment("IDENTITY_MIGRATOR_PASSWORD", MigratorPassword)
         .WithEnvironment("IDENTITY_APP_PASSWORD", AppPassword)
-        .WithResourceMapping(new FileInfo(FindRolesScript()), "/docker-entrypoint-initdb.d/")
+        .WithResourceMapping(new FileInfo(FindSeedFile("01-create-databases.sql")), "/docker-entrypoint-initdb.d/")
+        .WithResourceMapping(new FileInfo(FindSeedFile("02-identity-roles.sh")), "/docker-entrypoint-initdb.d/")
         .Build();
 
     public string AppConnectionString => ConnectionStringFor("identity_app", AppPassword);
@@ -57,17 +58,17 @@ public sealed class PostgresFixture : IAsyncLifetime
             Password = password,
         }.ConnectionString;
 
-    private static string FindRolesScript()
+    private static string FindSeedFile(string name)
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            var candidate = Path.Combine(directory.FullName, "deploy", "compose", "seed", "postgres", "02-identity-roles.sh");
+            var candidate = Path.Combine(directory.FullName, "deploy", "compose", "seed", "postgres", name);
             if (File.Exists(candidate))
             {
                 return candidate;
             }
         }
 
-        throw new FileNotFoundException("Could not find 02-identity-roles.sh above the test output directory.");
+        throw new FileNotFoundException($"Could not find {name} above the test output directory.");
     }
 }

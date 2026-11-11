@@ -13,6 +13,10 @@ namespace Identity.Infrastructure;
 
 public static class InfrastructureServiceCollectionExtensions
 {
+    private const int CommandTimeoutSeconds = 5;
+    private const int MaxRetries = 3;
+    private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromSeconds(1);
+
     public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services)
     {
         services.AddScoped<TenantContext>();
@@ -25,7 +29,9 @@ public static class InfrastructureServiceCollectionExtensions
                 ?? throw new InvalidOperationException("Missing required setting 'ConnectionStrings:Identity'.");
             var tenantContext = provider.GetRequiredService<ITenantContext>();
 
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(connectionString, npgsql => npgsql
+                .CommandTimeout(CommandTimeoutSeconds)
+                .EnableRetryOnFailure(MaxRetries, MaxRetryDelay, errorCodesToAdd: null));
             options.AddInterceptors(
                 new TenantConnectionInterceptor(tenantContext),
                 new TenantWriteInterceptor(tenantContext));

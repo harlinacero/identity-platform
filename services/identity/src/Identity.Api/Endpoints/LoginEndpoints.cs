@@ -34,11 +34,14 @@ public static class LoginEndpoints
         ValidateCredentialsHandler credentials,
         ILogger<ValidateCredentialsHandler> logger)
     {
-        await antiforgery.ValidateRequestAsync(context);
+        if (!await antiforgery.IsRequestValidAsync(context))
+        {
+            return Results.BadRequest();
+        }
 
         var form = await context.Request.ReadFormAsync(context.RequestAborted);
         var returnUrl = form["returnUrl"].ToString();
-        if (!LoginReturnUrl.TryGetClientId(returnUrl, out var clientId))
+        if (!LoginReturnUrl.TryGetClientId(returnUrl, out _))
         {
             return Results.BadRequest();
         }
@@ -50,7 +53,7 @@ public static class LoginEndpoints
 
         if (user is null)
         {
-            logger.LogInformation("Failed sign-in for client {ClientId} in tenant {TenantId}", clientId, tenant.TenantId);
+            logger.LogInformation("Failed sign-in in tenant {TenantId}", tenant.TenantId);
             return RenderForm(context, antiforgery, returnUrl, GenericFailure);
         }
 

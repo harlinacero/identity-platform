@@ -150,7 +150,7 @@ The per-stack workflows above are the target layout. Until services have real co
 
 ## Conventions
 - **English only:** code, comments, commits, docs, ADRs and agent files are written in English.
-- **One self-contained folder per service:** its own `Dockerfile`, tests and Helm chart. No service imports code from another; shared code lives in `building-blocks` or `contracts`.
+- **One self-contained folder per service:** its own `Dockerfile`, tests, Helm chart and a `features/` folder with its specs (`features/NNN-name/`). No service imports code from another; shared code lives in `building-blocks` or `contracts`.
 - **Docker only:** builds, tests and tools run in containers, and only Docker is required on the host (ADR-0005).
 - **Contracts first:** a change to an event or API starts in `contracts/`, and CI checks backward compatibility.
 - **Secrets:** only `.env.example` is committed; in Kubernetes, External Secrets points to Key Vault or Secrets Manager.
