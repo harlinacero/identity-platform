@@ -21,7 +21,15 @@ The local environment creates two tenants, each with one public client and a use
 | A | `tenant-a-web` | `SEED_TENANT_A_USER_PASSWORD` |
 | B | `tenant-b-web` | `SEED_TENANT_B_USER_PASSWORD` |
 
-Open this URL, replacing `<challenge>` with the Base64URL-encoded SHA-256 of a random verifier that you keep:
+The easiest way is `scripts/Try-SignIn.ps1`, which creates the PKCE values, exchanges the code and calls userinfo. Run it from the repository root, with the stack running:
+```powershell
+./services/identity/scripts/Try-SignIn.ps1                        # tenant A, sign in through your browser
+./services/identity/scripts/Try-SignIn.ps1 -Tenant B -Automatic   # tenant B, no browser; password read from .env
+./services/identity/scripts/Try-SignIn.ps1 -Scope openid          # without 'profile', no username is released
+```
+In browser mode, sign in and paste the address you land on (`http://localhost:5173/callback?code=...`); that page shows an error because no frontend exists yet. `-ShowTokens` also prints the raw tokens. `Get-Help ./services/identity/scripts/Try-SignIn.ps1` lists every option.
+
+To do it by hand, open this URL, replacing `<challenge>` with the Base64URL-encoded SHA-256 of a random verifier that you keep:
 ```text
 http://localhost:5001/connect/authorize?client_id=tenant-a-web&response_type=code&scope=openid%20profile&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2Fcallback&state=demo&code_challenge=<challenge>&code_challenge_method=S256
 ```
