@@ -27,7 +27,7 @@ Shared databases with a `tenant_id` column, enforced in two layers, with the ten
 - `tenant_id` is on every tenant-owned table from its first migration, including clients, tokens and local users in Phase 1. `identity-db` stores it without a foreign key, because tenants live in another service's database.
 - Layer 1: EF Core global query filters. Layer 2: PostgreSQL Row-Level Security on all tenant-owned tables, with `FORCE ROW LEVEL SECURITY`.
 - Services connect with a per-service role that is neither a superuser nor `BYPASSRLS`, and that can reach only its own database. Migrations use a separate role.
-- The tenant is set per transaction (`SET LOCAL`), so pooled connections cannot carry it over. Without tenant context, queries return nothing or throw.
+- The tenant is set whenever a connection opens and is reset when the connection returns to the pool, so pooled connections cannot carry it over. Without tenant context, queries return nothing or throw. See the 2026-11-04 amendment.
 - Uniqueness is scoped by tenant: `(tenant_id, email)`, `(tenant_id, username)`, `(tenant_id, external_id)` and `(tenant_id, idempotency_key)`.
 - Relationships between tenant-owned rows, such as role assignments and group members, use composite foreign keys that include `tenant_id`.
 
@@ -54,6 +54,15 @@ Shared databases with a `tenant_id` column, enforced in two layers, with the ten
 - A bug in application code no longer reaches other tenants' rows on its own, because the database also enforces the boundary.
 - Each service does more work: tenant context on every transaction, JWT validation and more roles to manage. Local Compose and Kubernetes need per-service database roles from Phase 1.
 - The same user can exist in two tenants as two separate accounts; there is no cross-tenant single account.
-- **To watch:** OpenIddict's EF Core stores are not tenant-aware, and they look up tokens and authorization codes before a user is known. Phase 1 must prove that RLS works with them, taking the tenant from `client_id`. If it doesn't, those tables need a documented exception or custom stores, and this ADR must be updated.
+- **Resolved on 2026-11-04:** OpenIddict's EF Core stores are not tenant-aware, and they look up tokens and authorization codes before a user is known. Identity feature 001 proved that RLS works with them, taking the tenant from `client_id` or from the validated token, with a test that fails when RLS is removed.
 - **To watch:** failed logins for an unknown client have no tenant. Audit needs a defined destination for these events, decided in Phase 3.
 - Not covered here: per-service OpenSearch roles and Redis ACLs, which remain a later hardening step.
+
+## Amendments
+
+### 2026-11-04 · Tenant set per connection instead of `SET LOCAL`
+The original decision set the tenant per transaction with `SET LOCAL`. OpenIddict's stores read outside transactions, where `SET LOCAL` has no effect, and one transaction per request would hold a connection during password hashing.
+
+Services now apply `set_config('app.tenant_id', <tenant or ''>, false)` when a connection opens, and rely on Npgsql's reset when it returns to the pool. The goal is unchanged: a pooled connection must never carry a tenant into another operation.
+
+This risk is accepted for now and must be validated by a test in each service that uses this approach (AC-28 of Identity feature 001). It is incompatible with PgBouncer in transaction mode, so the cloud phase must use session mode or direct connections, or revisit this decision.

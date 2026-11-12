@@ -69,3 +69,42 @@ Per service, in toolchain containers (`./dev.ps1 run <tool> <dir> <command...>`)
 - Before opening a PR on security-sensitive code, run the `security-reviewer`, `tenant-isolation-auditor` and `resilience-reviewer` subagents.
 - Record cross-cutting decisions as ADRs (`docs/adr/0000-template.md`).
 - Use the `verify-phase` skill to check a phase against its definition of done before closing it.
+
+## SDD Conventions
+
+### Structure
+- Service folders: `services/*` and `frontends/*`; each is self-contained.
+- Features folder: `<service>/features/NNN-kebab-case-name/`, numbered per service from `001`.
+- .NET layers: `<Svc>.Api`, `<Svc>.Application`, `<Svc>.Domain`, `<Svc>.Infrastructure` under `src/`.
+- Dependencies point inward: Domain has none, and only Infrastructure knows EF Core and brokers.
+
+### Code style
+- .NET: nullable enabled, warnings as errors, file-scoped namespaces, one type per file, async with CancellationToken.
+- Minimal APIs over controllers; configuration through `IOptions`.
+- No MediatR; plain handler classes.
+
+### Testing
+- xUnit and Testcontainers (PostgreSQL), with real databases for data access; never an in-memory provider. Test projects: `<Svc>.UnitTests`, `<Svc>.IntegrationTests`.
+- Naming: `Method_WhenCondition_ShouldResult`, with `// Arrange // Act // Assert`.
+- Mocks: NSubstitute, only at boundaries.
+- Every endpoint, consumer and tenant-owned table has a cross-tenant test (ADR-0006).
+
+### Dependencies & config
+- Versions centralized per service in `Directory.Packages.props`.
+- New packages are flagged in the technical spec for approval.
+
+### Inter-service communication
+- See the non-negotiable rules above and ADR-0003, ADR-0006.
+
+### Commands
+- Lint, build, test: `./dev.ps1 lint|build|test <stack>`
+- One service: `./dev.ps1 run dotnet services/identity dotnet test`
+
+### Git
+- Main branch: `main`; feature branches: `feature/NNN-kebab-case-name`.
+
+### Business glossary & rules
+- **Tenant**: an organization whose users, roles, clients and data are isolated from all others.
+- **Client**: an application registered to exactly one tenant, which delegates sign-in to the platform.
+- **Platform tenant**: the reserved tenant that holds super-administrators.
+- Rule: the same person in two tenants has two separate accounts.
