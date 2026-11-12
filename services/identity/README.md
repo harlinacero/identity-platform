@@ -2,6 +2,8 @@
 
 OAuth2/OIDC sign-in for the platform, built with .NET 10, OpenIddict and PostgreSQL. This covers feature [001](features/001-tenant-aware-identity-foundation/): local users and Authorization Code + PKCE, isolated by tenant ([ADR-0006](../../docs/adr/0006-multi-tenancy-strategy.md)).
 
+The [sign-in flow](docs/sign-in-flow.md) shows each step as a sequence diagram, with where the tenant is resolved.
+
 Refresh tokens, client credentials, sign-out and the React sign-in form come in later features. Local users move to Tenants & Users in Phase 2.
 
 ## Run it
