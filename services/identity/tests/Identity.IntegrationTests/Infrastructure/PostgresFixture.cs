@@ -12,8 +12,9 @@ namespace Identity.IntegrationTests.Infrastructure;
 public sealed class PostgresFixture : IAsyncLifetime
 {
     private const string Database = "identity";
-    private const string MigratorPassword = "test-migrator";
-    private const string AppPassword = "test-app";
+    // Random per fixture: the container is disposable, and no credential is written in the code.
+    private static readonly string MigratorPassword = Guid.NewGuid().ToString("N");
+    private static readonly string AppPassword = Guid.NewGuid().ToString("N");
 
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine")
         .WithDatabase(Database)

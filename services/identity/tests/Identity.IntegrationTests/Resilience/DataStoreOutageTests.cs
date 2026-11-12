@@ -88,6 +88,10 @@ public sealed class DataStoreOutageTests
         await using var cleanup = database;
         await using var factory = new IdentityApiFactory(database.AppConnectionString);
         var browser = factory.CreateBrowser();
+
+        // Warms up the pipeline, so the timing below measures the probe and not the first request's start-up.
+        var readyBefore = await browser.GetAsync("/health/ready");
+        Assert.Equal(HttpStatusCode.OK, readyBefore.StatusCode);
         await database.StopDatabaseAsync();
         var stopwatch = Stopwatch.StartNew();
 
